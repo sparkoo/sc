@@ -1,0 +1,11 @@
+name: Tester builds
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  package:
+    if: github.ref == 'refs/heads/master'
+    uses: ./.github/workflows/ci.yml
+    with:
+      package: true
