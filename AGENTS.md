@@ -6,3 +6,7 @@ Read [the requirements](docs/requirements.md) and [the architecture](docs/archit
 - Keep filesystem access and transfer decisions in Rust. Keep pane focus, keyboard interaction, and rendering in the frontend.
 - Update requirements with changes to user-visible behavior, architecture with changes to responsibilities or interfaces, and this file with changes to the development workflow. Include those updates in the same pull request.
 - Exercise destructive operations only in disposable test directories. Verify both source and destination after a failed or cancelled transfer.
+
+## Local checks
+
+Run `npm ci` after fetching dependency changes. Run `npm test` and `npm run build` for the frontend. From `src-tauri`, run `cargo fmt --check`, `cargo clippy --locked --all-targets -- -D warnings`, and `cargo test --locked`. Build the frontend first so Rust can embed the production assets. Use `npm run tauri -- dev` for interactive verification.
