@@ -1,6 +1,6 @@
 # Architecture
 
-SC uses React and TypeScript for the panes and a Tauri 2 host written in Rust for access to the local machine. This document describes the target architecture. The bootstrap commit establishes the project structure and requirements.
+SC uses React and TypeScript for the panes and a Tauri 2 host written in Rust for access to the local machine. The local listing flow is implemented. The transfer queue and additional providers are the next milestones.
 
 ```text
 Two independent panes (React)
@@ -17,7 +17,7 @@ Tauri command boundary (Rust)
 
 ## Opening a directory
 
-The pane requests a listing. Rust enumerates in a worker, retaining native path identity, and streams batches with display metadata. The pane ignores responses from superseded requests, renders visible rows, and owns navigation, sorting, focus, and marking. Each pane has independent state.
+The pane requests a listing with a monotonically increasing generation. Rust enumerates in a worker, encoding native path bytes as opaque IDs so a display name never identifies an operation target. A Tauri channel sends the resolved folder, batches of up to 256 entries, then a completion count of unreadable entries. A new request supersedes earlier generations for that pane. React coalesces incoming updates, sorts directory-first, and virtualizes the rows. Each pane owns its history, cursor and marks. Only the last location of each pane persists.
 
 ## Copying between panes
 
