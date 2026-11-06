@@ -15,6 +15,7 @@ base64 = "0.22"
 dirs = "6"
 dunce = "1"
 open = "5"
-
-[dev-dependencies]
+renamore = "0.3"
+same-file = "1"
+trash = "5"
 tempfile = "3"

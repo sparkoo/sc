@@ -1,9 +1,11 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod jobs;
 mod local;
+mod transfer;
 
 use std::sync::atomic::{AtomicU64, Ordering};
-use tauri::{ipc::Channel, Manager};
+use tauri::{ipc::Channel, Emitter, Manager};
 
 #[derive(Default)]
 struct Browsers([AtomicU64; 2]);
@@ -48,10 +50,24 @@ fn frontend_ready(app: tauri::AppHandle) {
 fn main() {
     tauri::Builder::default()
         .manage(Browsers::default())
+        .manage(jobs::Queue::default())
+        .on_window_event(|window, event| {
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                if window.state::<jobs::Queue>().busy() {
+                    api.prevent_close();
+                    let _ = window.emit("queue-needs-attention", ());
+                }
+            }
+        })
         .invoke_handler(tauri::generate_handler![
             frontend_ready,
             list_folder,
-            open_file
+            open_file,
+            jobs::start_job,
+            jobs::job_list,
+            jobs::job_report,
+            jobs::cancel_job,
+            jobs::answer_conflict
         ])
         .run(tauri::generate_context!())
         .expect("could not start SC Commander");
