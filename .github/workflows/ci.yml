@@ -47,3 +47,19 @@ jobs:
       - name: Compile desktop application
         if: ${{ !inputs.package }}
         run: npm run tauri -- build --no-bundle --debug -- --locked
+      - name: Package desktop application
+        if: inputs.package
+        run: npm run tauri -- build --ci --bundles ${{ matrix.bundle }} -- --locked
+      - name: Launch the packaged app
+        if: inputs.package
+        run: python .github/scripts/smoke.py
+      - uses: actions/upload-artifact@v4
+        if: inputs.package
+        with:
+          name: sc-${{ matrix.name }}-${{ github.sha }}
+          path: |
+            src-tauri/target/release/bundle/nsis/*-setup.exe
+            src-tauri/target/release/bundle/appimage/*.AppImage
+            src-tauri/target/release/bundle/dmg/*.dmg
+          if-no-files-found: error
+          retention-days: 30
