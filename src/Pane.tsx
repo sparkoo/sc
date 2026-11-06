@@ -61,7 +61,7 @@ export function Pane({ pane, side, active, activate, switchPane }: {
     } else return;
     event.preventDefault();
   }
-  return <section className={"pane" + (active ? " active" : "")} aria-label={name + " pane"} onFocus={activate} onPointerDown={activate}>
+  return <section data-side={side} className={"pane" + (active ? " active" : "")} aria-label={name + " pane"} onFocus={activate} onPointerDown={activate}>
     <div className="pane-header"><span className="pane-icon"><Icon name={side ? "right" : "left"} /></span><h2>{name} pane</h2>
       <div className="nav">
         <button title="Back" aria-label="Back" disabled={pane.history.index <= 0} onClick={() => pane.goHistory(-1)}><Icon name="back" /></button>

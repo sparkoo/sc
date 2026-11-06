@@ -11,15 +11,20 @@ export function App() {
   const [active, setActive] = useState(0);
   const [prompt, setPrompt] = useState<Prompt | null>(null);
   const queue = useJobs(() => { if (!left.loading) left.refresh(); if (!right.loading) right.refresh(); });
-  function begin(action: Action) {
-    const request = prepare(action, panes[active], panes[1-active]);
+  function begin(action: Action, side = active) {
+    setActive(side);
+    const request = prepare(action, panes[side], panes[1-side]);
     if (request) setPrompt(request);
   }
   useEffect(() => {
     function shortcuts(event: KeyboardEvent) {
       if (prompt || event.ctrlKey || event.altKey || event.metaKey || event.shiftKey || event.target instanceof HTMLInputElement) return;
       const command = commands.find(c => c.key === event.key);
-      if (command) { event.preventDefault(); begin(command.action); }
+      if (command) {
+        event.preventDefault();
+        const pane = event.target instanceof Element ? event.target.closest<HTMLElement>(".pane") : null;
+        begin(command.action, pane ? Number(pane.dataset.side) : active);
+      }
     }
     window.addEventListener("keydown", shortcuts);
     return () => window.removeEventListener("keydown", shortcuts);
