@@ -1,9 +1,13 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod jobs;
 mod local;
+mod transfer;
+#[cfg(feature = "ui-test")]
+mod ui_test;
 
 use std::sync::atomic::{AtomicU64, Ordering};
-use tauri::{ipc::Channel, Manager};
+use tauri::{ipc::Channel, Emitter, Manager};
 
 #[derive(Default)]
 struct Browsers([AtomicU64; 2]);
@@ -39,19 +43,37 @@ async fn open_file(id: String) -> Result<(), String> {
 }
 
 #[tauri::command]
-fn frontend_ready(app: tauri::AppHandle) {
+fn frontend_ready(window: tauri::WebviewWindow, report: Option<serde_json::Value>) {
     if std::env::args_os().any(|arg| arg == "--smoke-test") {
-        app.exit(0);
+        window.app_handle().exit(0);
     }
+    #[cfg(feature = "ui-test")]
+    ui_test::drive(&window, report);
+    #[cfg(not(feature = "ui-test"))]
+    let _ = report;
 }
 
 fn main() {
     tauri::Builder::default()
         .manage(Browsers::default())
+        .manage(jobs::Queue::default())
+        .on_window_event(|window, event| {
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                if window.state::<jobs::Queue>().busy() {
+                    api.prevent_close();
+                    let _ = window.emit("queue-needs-attention", ());
+                }
+            }
+        })
         .invoke_handler(tauri::generate_handler![
             frontend_ready,
             list_folder,
-            open_file
+            open_file,
+            jobs::start_job,
+            jobs::job_list,
+            jobs::job_report,
+            jobs::cancel_job,
+            jobs::answer_conflict
         ])
         .run(tauri::generate_context!())
         .expect("could not start SC Commander");

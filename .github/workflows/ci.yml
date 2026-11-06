@@ -46,7 +46,10 @@ jobs:
       - run: cargo test --manifest-path src-tauri/Cargo.toml --locked
       - name: Compile desktop application
         if: ${{ !inputs.package }}
-        run: npm run tauri -- build --no-bundle --debug -- --locked
+        run: npm run tauri -- build --no-bundle --debug --features ui-test -- --locked
+      - name: Exercise the desktop workflow and 100,000-entry folder
+        if: ${{ !inputs.package }}
+        run: python tests/desktop.py
       - name: Package desktop application
         if: inputs.package
         run: npm run tauri -- build --ci --bundles ${{ matrix.bundle }} -- --locked

@@ -16,6 +16,8 @@ F2 renames, F5 copies to the opposite pane, F6 moves there, F7 creates a folder,
 
 Offer Skip, Keep both, and Replace for file collisions. Merge matching directories. Publish completed copies before removing their sources on cross-volume moves. Clean up interrupted work, preserve links where supported, and reject recursive self-copies.
 
+The operations panel shows the current file, transferred bytes, conflicts, cancellation, and a detailed list of finished or skipped entries. Keep both chooses a numbered sibling. Replace is available for distinct regular files. Jobs stop on the first error. An in-progress directory transfer can leave completed children in the destination.
+
 ### Acceptance
 
 - Browse 100,000 entries on each target OS. Record time to first rows and verify that the other pane remains usable while loading.

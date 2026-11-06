@@ -1,6 +1,6 @@
 # Architecture
 
-SC uses React and TypeScript for the panes and a Tauri 2 host written in Rust for access to the local machine. The local listing flow is implemented. The transfer queue and additional providers are the next milestones.
+SC uses React and TypeScript for the panes and a Tauri 2 host written in Rust for access to the local machine. Local browsing and operations share the native path identity in the local storage module. Remote storage and previews are planned.
 
 ```text
 Two independent panes (React)
@@ -21,7 +21,9 @@ The pane requests a listing with a monotonically increasing generation. Rust enu
 
 ## Copying between panes
 
-The frontend submits the selected entries and destination. The Rust queue serializes jobs, checks for conflicts, stages file copies in the destination directory, and publishes completed output. It reports progress and asks for conflict decisions without blocking either pane. A move removes a source only after the destination succeeds. The frontend refreshes affected listings when a job finishes.
+The frontend submits opaque source IDs and a destination to a single Rust worker queue. The UI polls compact job summaries every 250 ms while jobs are active and fetches detailed results on demand. A conflict suspends the worker until a token-matched decision or cancellation arrives. The panes stay interactive. Closing the window with pending work opens the queue.
+
+Moves first try an exclusive OS rename. A cross-volume move falls back to a staged copy in the destination directory. Regular files are copied in chunks, synced, then published with no-clobber semantics unless the user explicitly approved replacement. After a successful publication, a move removes its source. On failure, completed entries remain available in the report and unfinished source files stay in place. Folder collisions merge recursively, and unsupported special files report an error. Trash uses the platform trash service. The UI refreshes both panes after completion.
 
 ## Extension points
 

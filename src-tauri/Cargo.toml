@@ -4,6 +4,9 @@ version = "0.1.0"
 edition = "2021"
 description = "Two-pane desktop file commander"
 
+[features]
+ui-test = []
+
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 
@@ -15,6 +18,7 @@ base64 = "0.22"
 dirs = "6"
 dunce = "1"
 open = "5"
-
-[dev-dependencies]
+renamore = "0.3"
+same-file = "1"
+trash = "5"
 tempfile = "3"
