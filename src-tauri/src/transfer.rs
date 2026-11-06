@@ -1,7 +1,7 @@
 use std::{
     ffi::OsString,
     fs::{self, File},
-    io::{self, Read, Write},
+    io,
     path::{Component, Path, PathBuf},
 };
 
@@ -9,6 +9,10 @@ use crate::local::resolve;
 use serde::{Deserialize, Serialize};
 #[cfg(test)]
 mod tests;
+#[cfg(windows)]
+mod windows_copy;
+#[cfg(unix)]
+use std::io::{Read, Write};
 
 #[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -264,19 +268,21 @@ fn copy_file(
     replace: bool,
     feedback: &dyn Feedback,
 ) -> io::Result<()> {
-    let mut input = File::open(source)?;
+    let input = File::open(source)?;
     let before = input.metadata()?;
-    let mut stage = tempfile::NamedTempFile::new_in(destination.parent().unwrap())?;
-    let mut buffer = vec![0; 256 * 1024];
-    loop {
-        feedback.check()?;
-        let count = input.read(&mut buffer)?;
-        if count == 0 {
-            break;
-        }
-        stage.write_all(&buffer[..count])?;
-        feedback.progress(source, count as u64);
+    let mut builder = tempfile::Builder::new();
+    builder.prefix(".sc-transfer-");
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        builder.permissions(fs::Permissions::from_mode(0o700));
     }
+    let staging = builder.tempdir_in(destination.parent().unwrap())?;
+    let stage = staging.path().join("payload");
+    #[cfg(windows)]
+    windows_copy::copy(source, &stage, feedback)?;
+    #[cfg(unix)]
+    copy_data(source, &input, &stage, feedback)?;
     let after = fs::symlink_metadata(source)?;
     if !after.is_file()
         || before.len() != after.len()
@@ -285,16 +291,44 @@ fn copy_file(
     {
         return Err(io::Error::other("Source changed during transfer"));
     }
-    stage.as_file().set_modified(before.modified()?)?;
-    stage.as_file().set_permissions(before.permissions())?;
-    stage.as_file().sync_all()?;
     feedback.check()?;
     if replace {
-        stage.persist(destination)?;
+        fs::rename(stage, destination)?;
     } else {
-        stage.persist_noclobber(destination)?;
+        renamore::rename_exclusive(stage, destination)?;
     }
     Ok(())
+}
+
+#[cfg(unix)]
+fn copy_data(
+    source: &Path,
+    mut input: &File,
+    stage: &Path,
+    feedback: &dyn Feedback,
+) -> io::Result<()> {
+    use xattr::FileExt;
+    let before = input.metadata()?;
+    let mut output = File::create_new(stage)?;
+    let mut buffer = vec![0; 256 * 1024];
+    loop {
+        feedback.check()?;
+        let count = input.read(&mut buffer)?;
+        if count == 0 {
+            break;
+        }
+        output.write_all(&buffer[..count])?;
+        feedback.progress(source, count as u64);
+    }
+    for key in input.list_xattr()? {
+        feedback.check()?;
+        if let Some(value) = input.get_xattr(&key)? {
+            output.set_xattr(&key, &value)?;
+        }
+    }
+    output.set_modified(before.modified()?)?;
+    output.set_permissions(before.permissions())?;
+    output.sync_all()
 }
 
 #[cfg(unix)]

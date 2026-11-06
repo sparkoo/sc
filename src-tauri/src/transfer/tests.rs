@@ -3,6 +3,36 @@ use crate::local::entry_id;
 use std::cell::Cell;
 use tempfile::tempdir;
 
+#[cfg(windows)]
+#[test]
+fn retains_ntfs_named_streams() {
+    let root = tempdir().unwrap();
+    let source = root.path().join("source");
+    let dest = root.path().join("dest");
+    fs::write(&source, b"data").unwrap();
+    fs::write(root.path().join("source:metadata"), b"named data").unwrap();
+    transfer(&source, &dest, false, &Observer::new(Decision::Skip)).unwrap();
+    assert_eq!(
+        fs::read(root.path().join("dest:metadata")).unwrap(),
+        b"named data"
+    );
+}
+
+#[cfg(unix)]
+#[test]
+fn retains_extended_attributes() {
+    let root = tempdir().unwrap();
+    let source = root.path().join("source");
+    let dest = root.path().join("dest");
+    fs::write(&source, b"data").unwrap();
+    xattr::set(&source, "user.sc_test", b"metadata").unwrap();
+    transfer(&source, &dest, false, &Observer::new(Decision::Skip)).unwrap();
+    assert_eq!(
+        xattr::get(dest, "user.sc_test").unwrap().unwrap(),
+        b"metadata"
+    );
+}
+
 struct Observer {
     decision: Decision,
     bytes: Cell<u64>,
