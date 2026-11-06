@@ -1,0 +1,49 @@
+name: Desktop CI
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_call:
+    inputs:
+      package:
+        type: boolean
+        default: false
+permissions:
+  contents: read
+jobs:
+  desktop:
+    name: ${{ matrix.name }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: windows-x64, os: windows-2022, bundle: nsis }
+          - { name: linux-x64, os: ubuntu-24.04, bundle: appimage }
+          - { name: macos-arm64, os: macos-15, bundle: dmg }
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install Linux desktop dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf libfuse2t64 xvfb xauth
+      - name: Set up Rust
+        run: rustup toolchain install stable --profile minimal --component rustfmt,clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+      - run: cargo fmt --manifest-path src-tauri/Cargo.toml --check
+      - run: cargo clippy --manifest-path src-tauri/Cargo.toml --locked --all-targets -- -D warnings
+      - run: cargo test --manifest-path src-tauri/Cargo.toml --locked
+      - name: Compile desktop application
+        if: ${{ !inputs.package }}
+        run: npm run tauri -- build --no-bundle --debug -- --locked
