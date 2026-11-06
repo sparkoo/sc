@@ -20,7 +20,7 @@ const complete = (job: Job) => ["finished","cancelled","failed"].includes(job.ph
 export type Prompt = { action: Action; names: string[]; ids: string[]; destination: string; path: string };
 export function prepare(action: Action, from: BrowserPane, to: BrowserPane): Prompt | null {
   const destination = action === "copy" || action === "move" ? to.folder : from.folder;
-  if (!destination || !from.folder || from.loading || ((action === "copy" || action === "move") && to.loading)) return null;
+  if (!destination || !from.folder?.actions.includes(action) || from.loading || ((action === "copy" || action === "move") && to.loading)) return null;
   const selected = action === "newFolder" ? [] : from.entries.filter(e => from.marked.size ? from.marked.has(e.id) : e.id === from.cursor);
   if (action !== "newFolder" && !selected.length) return null;
   if (action === "rename" && selected.length !== 1) return null;

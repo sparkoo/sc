@@ -27,4 +27,4 @@ Moves first try an exclusive OS rename. A cross-volume move falls back to a stag
 
 ## Extension points
 
-The local storage provider is the first implementation. Add SFTP as a second provider before stabilizing a public plugin interface. Providers describe which operations they support, including trash. A future preview provider will consume content through storage rather than assume that every entry has a local path.
+The internal `StorageProvider` interface owns directory streaming, external opening, and execution of typed file requests. The Tauri commands and queue share a single local provider. Each listed folder advertises its supported actions, which determines the available pane commands. Local staging, permissions, and rename semantics stay inside the provider implementation. When SFTP arrives, add provider routing and stream-based transfers between providers. A future preview provider will consume content through storage. The public plugin API follows those two concrete implementations.

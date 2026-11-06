@@ -42,7 +42,7 @@ export function App() {
     <footer className="commands">{commands.map(c => {
       const pane = panes[active];
       const count = pane.marked.size || (pane.cursor ? 1 : 0);
-      const disabled = !pane.folder || pane.loading || (c.action === "rename" && count !== 1) ||
+      const disabled = !pane.folder?.actions.includes(c.action) || pane.loading || (c.action === "rename" && count !== 1) ||
         (c.action !== "newFolder" && count === 0) || (["move","copy"].includes(c.action) && (!panes[1-active].folder || panes[1-active].loading));
       return <button key={c.key} disabled={disabled} onClick={() => begin(c.action)}><kbd>{c.key}</kbd>{c.label}</button>;
     })}<button className="switch" onClick={() => { setActive(1-active); focusPane(1-active); }}><kbd>Tab</kbd>Switch pane</button></footer>

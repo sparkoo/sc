@@ -56,7 +56,7 @@ fn with_path(e: io::Error, path: &Path) -> io::Error {
     io::Error::new(e.kind(), format!("{}: {e}", path.display()))
 }
 
-pub fn execute(request: &Request, feedback: &impl Feedback) -> io::Result<()> {
+pub fn execute(request: &Request, feedback: &dyn Feedback) -> io::Result<()> {
     let destination = dunce::canonicalize(resolve(&request.directory)?)?;
     if !destination.is_dir() {
         return Err(io::Error::other("Destination is not a folder"));
@@ -153,7 +153,7 @@ fn transfer(
     source: &Path,
     target: &Path,
     moving: bool,
-    feedback: &impl Feedback,
+    feedback: &dyn Feedback,
 ) -> io::Result<bool> {
     feedback.check()?;
     feedback.progress(source, 0);
@@ -241,7 +241,7 @@ fn transfer_leaf(
     meta: &fs::Metadata,
     moving: bool,
     replace: bool,
-    feedback: &impl Feedback,
+    feedback: &dyn Feedback,
 ) -> io::Result<()> {
     if meta.is_symlink() {
         copy_link(source, destination, meta)?;
@@ -262,7 +262,7 @@ fn copy_file(
     source: &Path,
     destination: &Path,
     replace: bool,
-    feedback: &impl Feedback,
+    feedback: &dyn Feedback,
 ) -> io::Result<()> {
     let mut input = File::open(source)?;
     let before = input.metadata()?;

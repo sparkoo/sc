@@ -2,7 +2,7 @@ import { Channel, invoke } from "@tauri-apps/api/core";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 export type Target = "home" | { id: string } | { path: string };
-export type Folder = { id: string; path: string; parent: string | null };
+export type Folder = { id: string; path: string; parent: string | null; actions: string[] };
 export type Entry = { id: string; name: string; directory: boolean; link: boolean; size: number; modified: number | null };
 type Listing = { type: "opened"; data: Folder } | { type: "entries"; data: Entry[] } | { type: "done"; data: number };
 export type Column = "name" | "size" | "modified";

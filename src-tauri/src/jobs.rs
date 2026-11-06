@@ -1,4 +1,5 @@
-use crate::transfer::{self, Action, Decision, Feedback, Request};
+use crate::storage::Storage;
+use crate::transfer::{Action, Decision, Feedback, Request};
 use serde::Serialize;
 use std::{
     io,
@@ -90,13 +91,13 @@ pub struct Queue {
     sender: mpsc::Sender<(Arc<Job>, Request)>,
 }
 
-impl Default for Queue {
-    fn default() -> Self {
+impl Queue {
+    pub fn new(storage: Storage) -> Self {
         let (sender, tasks) = mpsc::channel::<(Arc<Job>, Request)>();
         thread::spawn(move || {
             for (job, request) in tasks {
                 job.data.lock().unwrap().summary.phase = "running";
-                let result = transfer::execute(&request, &*job);
+                let result = storage.execute(&request, &*job);
                 let mut data = job.data.lock().unwrap();
                 match result {
                     Ok(()) => data.summary.phase = "finished",
