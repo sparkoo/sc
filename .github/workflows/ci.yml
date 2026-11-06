@@ -50,6 +50,9 @@ jobs:
       - name: Package desktop application
         if: inputs.package
         run: npm run tauri -- build --ci --bundles ${{ matrix.bundle }} -- --locked
+      - name: Measure large-directory streaming
+        if: inputs.package
+        run: cargo test --manifest-path src-tauri/Cargo.toml --locked large_directory_streams -- --ignored --nocapture
       - name: Launch the packaged app
         if: inputs.package
         run: python .github/scripts/smoke.py
