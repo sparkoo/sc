@@ -5,8 +5,9 @@ use std::{
     time::UNIX_EPOCH,
 };
 
+use crate::storage::{Entry, Folder, Listing, StorageProvider, Target};
+use crate::transfer::{self, Action, Feedback, Request};
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
-use serde::{Deserialize, Serialize};
 
 #[cfg(unix)]
 use std::os::unix::ffi::{OsStrExt, OsStringExt};
@@ -47,14 +48,6 @@ pub fn resolve(id: &str) -> io::Result<PathBuf> {
     }
 }
 
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub enum Target {
-    Id(String),
-    Path(String),
-    Home,
-}
-
 impl Target {
     fn path(self) -> io::Result<PathBuf> {
         match self {
@@ -74,31 +67,18 @@ impl Target {
     }
 }
 
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct Folder {
-    id: String,
-    path: String,
-    parent: Option<String>,
-}
+pub struct LocalStorage;
 
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct Entry {
-    id: String,
-    name: String,
-    directory: bool,
-    link: bool,
-    size: u64,
-    modified: Option<u64>,
-}
-
-#[derive(Serialize)]
-#[serde(tag = "type", content = "data", rename_all = "camelCase")]
-pub enum Listing {
-    Opened(Folder),
-    Entries(Vec<Entry>),
-    Done(usize),
+impl StorageProvider for LocalStorage {
+    fn list(&self, target: Target, sink: &mut dyn FnMut(Listing) -> bool) -> io::Result<()> {
+        list(target, sink)
+    }
+    fn open(&self, id: &str) -> io::Result<()> {
+        open::that(resolve(id)?)
+    }
+    fn execute(&self, request: &Request, feedback: &dyn Feedback) -> io::Result<()> {
+        transfer::execute(request, feedback)
+    }
 }
 
 pub fn list(target: Target, mut send: impl FnMut(Listing) -> bool) -> io::Result<()> {
@@ -108,6 +88,13 @@ pub fn list(target: Target, mut send: impl FnMut(Listing) -> bool) -> io::Result
         id: entry_id(&path),
         path: path.to_string_lossy().into_owned(),
         parent: path.parent().map(entry_id),
+        actions: &[
+            Action::Copy,
+            Action::Move,
+            Action::Rename,
+            Action::NewFolder,
+            Action::Trash,
+        ],
     })) {
         return Ok(());
     }

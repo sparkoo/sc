@@ -1,7 +1,7 @@
 use std::{
     ffi::OsString,
     fs::{self, File},
-    io::{self, Read, Write},
+    io,
     path::{Component, Path, PathBuf},
 };
 
@@ -9,6 +9,10 @@ use crate::local::resolve;
 use serde::{Deserialize, Serialize};
 #[cfg(test)]
 mod tests;
+#[cfg(windows)]
+mod windows_copy;
+#[cfg(unix)]
+use std::io::{Read, Write};
 
 #[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -56,7 +60,7 @@ fn with_path(e: io::Error, path: &Path) -> io::Error {
     io::Error::new(e.kind(), format!("{}: {e}", path.display()))
 }
 
-pub fn execute(request: &Request, feedback: &impl Feedback) -> io::Result<()> {
+pub fn execute(request: &Request, feedback: &dyn Feedback) -> io::Result<()> {
     let destination = dunce::canonicalize(resolve(&request.directory)?)?;
     if !destination.is_dir() {
         return Err(io::Error::other("Destination is not a folder"));
@@ -153,7 +157,7 @@ fn transfer(
     source: &Path,
     target: &Path,
     moving: bool,
-    feedback: &impl Feedback,
+    feedback: &dyn Feedback,
 ) -> io::Result<bool> {
     feedback.check()?;
     feedback.progress(source, 0);
@@ -241,17 +245,24 @@ fn transfer_leaf(
     meta: &fs::Metadata,
     moving: bool,
     replace: bool,
-    feedback: &impl Feedback,
+    feedback: &dyn Feedback,
 ) -> io::Result<()> {
-    if meta.is_symlink() {
+    let original = if meta.is_symlink() {
         copy_link(source, destination, meta)?;
+        None
     } else if meta.is_file() {
-        copy_file(source, destination, replace, feedback)?;
+        Some(copy_file(source, destination, replace, feedback)?)
     } else {
         return Err(io::Error::other("Unsupported special file"));
-    }
+    };
     feedback.record(destination, "Copied");
     if moving {
+        feedback.check()?;
+        if let Some((identity, before)) = original {
+            unchanged(source, &identity, &before)?;
+        } else if fs::read_link(source)? != fs::read_link(destination)? {
+            return Err(io::Error::other("Source link changed during transfer"));
+        }
         remove_leaf(source, meta)?;
         feedback.record(source, "Removed source");
     }
@@ -262,11 +273,56 @@ fn copy_file(
     source: &Path,
     destination: &Path,
     replace: bool,
-    feedback: &impl Feedback,
-) -> io::Result<()> {
-    let mut input = File::open(source)?;
+    feedback: &dyn Feedback,
+) -> io::Result<(same_file::Handle, fs::Metadata)> {
+    let input = File::open(source)?;
     let before = input.metadata()?;
-    let mut stage = tempfile::NamedTempFile::new_in(destination.parent().unwrap())?;
+    let identity = same_file::Handle::from_file(input.try_clone()?)?;
+    let mut builder = tempfile::Builder::new();
+    builder.prefix(".sc-transfer-");
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        builder.permissions(fs::Permissions::from_mode(0o700));
+    }
+    let staging = builder.tempdir_in(destination.parent().unwrap())?;
+    let stage = staging.path().join("payload");
+    #[cfg(windows)]
+    windows_copy::copy(source, &stage, feedback)?;
+    #[cfg(unix)]
+    copy_data(source, &input, &stage, feedback)?;
+    unchanged(source, &identity, &before)?;
+    feedback.check()?;
+    if replace {
+        fs::rename(stage, destination)?;
+    } else {
+        renamore::rename_exclusive(stage, destination)?;
+    }
+    Ok((identity, before))
+}
+
+fn unchanged(source: &Path, identity: &same_file::Handle, before: &fs::Metadata) -> io::Result<()> {
+    let after = fs::symlink_metadata(source)?;
+    if !after.is_file()
+        || before.len() != after.len()
+        || before.modified()? != after.modified()?
+        || *identity != same_file::Handle::from_path(source)?
+    {
+        return Err(io::Error::other("Source changed during transfer"));
+    }
+    Ok(())
+}
+
+#[cfg(unix)]
+fn copy_data(
+    source: &Path,
+    mut input: &File,
+    stage: &Path,
+    feedback: &dyn Feedback,
+) -> io::Result<()> {
+    use xattr::FileExt;
+    let before = input.metadata()?;
+    let mut output = File::create_new(stage)?;
     let mut buffer = vec![0; 256 * 1024];
     loop {
         feedback.check()?;
@@ -274,27 +330,18 @@ fn copy_file(
         if count == 0 {
             break;
         }
-        stage.write_all(&buffer[..count])?;
+        output.write_all(&buffer[..count])?;
         feedback.progress(source, count as u64);
     }
-    let after = fs::symlink_metadata(source)?;
-    if !after.is_file()
-        || before.len() != after.len()
-        || before.modified()? != after.modified()?
-        || same_file::Handle::from_file(input)? != same_file::Handle::from_path(source)?
-    {
-        return Err(io::Error::other("Source changed during transfer"));
+    for key in input.list_xattr()? {
+        feedback.check()?;
+        if let Some(value) = input.get_xattr(&key)? {
+            output.set_xattr(&key, &value)?;
+        }
     }
-    stage.as_file().set_modified(before.modified()?)?;
-    stage.as_file().set_permissions(before.permissions())?;
-    stage.as_file().sync_all()?;
-    feedback.check()?;
-    if replace {
-        stage.persist(destination)?;
-    } else {
-        stage.persist_noclobber(destination)?;
-    }
-    Ok(())
+    output.set_modified(before.modified()?)?;
+    output.set_permissions(before.permissions())?;
+    output.sync_all()
 }
 
 #[cfg(unix)]

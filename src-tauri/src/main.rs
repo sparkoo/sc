@@ -2,6 +2,7 @@
 
 mod jobs;
 mod local;
+mod storage;
 mod transfer;
 #[cfg(feature = "ui-test")]
 mod ui_test;
@@ -17,14 +18,14 @@ async fn list_folder(
     app: tauri::AppHandle,
     pane: usize,
     generation: u64,
-    target: local::Target,
-    updates: Channel<local::Listing>,
+    target: storage::Target,
+    updates: Channel<storage::Listing>,
 ) -> Result<(), String> {
     let browsers = app.state::<Browsers>();
     let counter = browsers.0.get(pane).ok_or("Invalid pane")?;
     counter.fetch_max(generation, Ordering::SeqCst);
     tauri::async_runtime::spawn_blocking(move || {
-        local::list(target, |batch| {
+        app.state::<storage::Storage>().list(target, &mut |batch| {
             app.state::<Browsers>().0[pane].load(Ordering::SeqCst) == generation
                 && updates.send(batch).is_ok()
         })
@@ -35,8 +36,8 @@ async fn list_folder(
 }
 
 #[tauri::command]
-async fn open_file(id: String) -> Result<(), String> {
-    tauri::async_runtime::spawn_blocking(move || open::that(local::resolve(&id)?))
+async fn open_file(app: tauri::AppHandle, id: String) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || app.state::<storage::Storage>().open(&id))
         .await
         .map_err(|e| e.to_string())?
         .map_err(|e| e.to_string())
@@ -54,9 +55,11 @@ fn frontend_ready(window: tauri::WebviewWindow, report: Option<serde_json::Value
 }
 
 fn main() {
+    let provider: storage::Storage = std::sync::Arc::new(local::LocalStorage);
     tauri::Builder::default()
+        .manage(provider.clone())
         .manage(Browsers::default())
-        .manage(jobs::Queue::default())
+        .manage(jobs::Queue::new(provider))
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
                 if window.state::<jobs::Queue>().busy() {

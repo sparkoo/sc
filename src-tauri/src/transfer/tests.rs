@@ -3,6 +3,36 @@ use crate::local::entry_id;
 use std::cell::Cell;
 use tempfile::tempdir;
 
+#[cfg(windows)]
+#[test]
+fn retains_ntfs_named_streams() {
+    let root = tempdir().unwrap();
+    let source = root.path().join("source");
+    let dest = root.path().join("dest");
+    fs::write(&source, b"data").unwrap();
+    fs::write(root.path().join("source:metadata"), b"named data").unwrap();
+    transfer(&source, &dest, false, &Observer::new(Decision::Skip)).unwrap();
+    assert_eq!(
+        fs::read(root.path().join("dest:metadata")).unwrap(),
+        b"named data"
+    );
+}
+
+#[cfg(unix)]
+#[test]
+fn retains_extended_attributes() {
+    let root = tempdir().unwrap();
+    let source = root.path().join("source");
+    let dest = root.path().join("dest");
+    fs::write(&source, b"data").unwrap();
+    xattr::set(&source, "user.sc_test", b"metadata").unwrap();
+    transfer(&source, &dest, false, &Observer::new(Decision::Skip)).unwrap();
+    assert_eq!(
+        xattr::get(dest, "user.sc_test").unwrap().unwrap(),
+        b"metadata"
+    );
+}
+
 struct Observer {
     decision: Decision,
     bytes: Cell<u64>,
@@ -33,6 +63,45 @@ impl Feedback for Observer {
         self.bytes.set(self.bytes.get() + bytes);
     }
     fn record(&self, _: &Path, _: &str) {}
+}
+
+#[test]
+fn keeps_a_source_edited_after_destination_publication() {
+    struct EditAfterCopy {
+        source: PathBuf,
+    }
+    impl Feedback for EditAfterCopy {
+        fn check(&self) -> io::Result<()> {
+            Ok(())
+        }
+        fn conflict(&self, _: &Path, _: bool) -> io::Result<Decision> {
+            Ok(Decision::Skip)
+        }
+        fn progress(&self, _: &Path, _: u64) {}
+        fn record(&self, _: &Path, outcome: &str) {
+            if outcome == "Copied" {
+                fs::write(&self.source, b"new version").unwrap();
+            }
+        }
+    }
+    let root = tempdir().unwrap();
+    let source = root.path().join("source");
+    let destination = root.path().join("destination");
+    fs::write(&source, b"old").unwrap();
+    let feedback = EditAfterCopy {
+        source: source.clone(),
+    };
+    let result = transfer_leaf(
+        &source,
+        &destination,
+        &source.metadata().unwrap(),
+        true,
+        false,
+        &feedback,
+    );
+    assert!(result.unwrap_err().to_string().contains("Source changed"));
+    assert_eq!(fs::read(source).unwrap(), b"new version");
+    assert_eq!(fs::read(destination).unwrap(), b"old");
 }
 
 #[test]

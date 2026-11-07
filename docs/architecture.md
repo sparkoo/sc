@@ -25,6 +25,10 @@ The frontend submits opaque source IDs and a destination to a single Rust worker
 
 Moves first try an exclusive OS rename. A cross-volume move falls back to a staged copy in the destination directory. Regular files are copied in chunks, synced, then published with no-clobber semantics unless the user explicitly approved replacement. After a successful publication, a move removes its source. On failure, completed entries remain available in the report and unfinished source files stay in place. Folder collisions merge recursively, and unsupported special files report an error. Trash uses the platform trash service. The UI refreshes both panes after completion.
 
-## Extension points
+## File metadata
 
-The local storage provider is the first implementation. Add SFTP as a second provider before stabilizing a public plugin interface. Providers describe which operations they support, including trash. A future preview provider will consume content through storage rather than assume that every entry has a local path.
+Regular-file copies use the Windows native copy API to retain alternate data streams and report cancellation. On Unix the staged file receives the source's extended attributes, modification time, and permissions. A metadata-copy error aborts before publishing the staged file. The source's identity, size, and modification time are checked before publication and again before removal on a move. A detected external edit preserves the source and reports an error.
+
+## Provider interface
+
+The internal `StorageProvider` interface owns directory streaming, external opening, and execution of typed file requests. The Tauri commands and queue share a single local provider. Each listed folder advertises its supported actions, which determines the available pane commands. Local staging, permissions, and rename semantics stay inside the provider implementation. When SFTP arrives, add provider routing and stream-based transfers between providers. A future preview provider will consume content through storage. The public plugin API follows those two concrete implementations.
