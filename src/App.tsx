@@ -1,3 +1,4 @@
+import { Button, Kbd } from "@radix-ui/themes";
 import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { useBrowser } from "./browser";
@@ -69,14 +70,16 @@ export function App() {
         <h1>
           SC <strong>Commander</strong>
         </h1>
-        <button
+        <Button
+          size="1"
+          variant="soft"
           className="jobs-button"
           aria-expanded={queue.visible}
           onClick={() => queue.setVisible(!queue.visible)}
         >
           <Icon name="activity" />
           Operations {queue.jobs.length || ""}
-        </button>
+        </Button>
       </header>
       <div className="panes">
         {panes.map((pane, side) => (
@@ -106,25 +109,29 @@ export function App() {
             (["move", "copy"].includes(c.action) &&
               (!panes[1 - active].folder || panes[1 - active].loading));
           return (
-            <button
+            <Button
+              size="1"
+              variant="soft"
               key={c.key}
               disabled={disabled}
               onClick={() => begin(c.action)}
             >
-              <kbd>{c.key}</kbd>
+              <Kbd>{c.key}</Kbd>
               {c.label}
-            </button>
+            </Button>
           );
         })}
-        <button
+        <Button
+          size="1"
+          variant="soft"
           className="switch"
           onClick={() => {
             setActive(1 - active);
             focusPane(1 - active);
           }}
         >
-          <kbd>Tab</kbd>Switch pane
-        </button>
+          <Kbd>Tab</Kbd>Switch pane
+        </Button>
       </footer>
       {prompt && (
         <OperationDialog

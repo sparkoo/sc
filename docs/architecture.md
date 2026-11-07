@@ -15,6 +15,10 @@ Tauri command boundary (Rust)
                local filesystem
 ```
 
+## Frontend styling
+
+A root Radix Themes provider owns the appearance, accent, neutral palette, and control sizing. Buttons, keyboard hints, and operation name fields use Radix components. A shared frontend row-height constant drives virtual row positions, rendered height, and page-key movement. Custom pane and virtualized-row CSS consumes the same theme tokens; native modal dialogs retain the existing focus and submission behavior.
+
 ## Opening a directory
 
 The pane requests a listing with a monotonically increasing generation. Rust enumerates in a worker, encoding native path bytes as opaque IDs so a display name never identifies an operation target. A Tauri channel sends the resolved folder, batches of up to 256 entries, then a completion count of unreadable entries. A new request supersedes earlier generations for that pane. React coalesces incoming updates, sorts directory-first, and virtualizes the rows. Each pane owns its history, cursor and marks. Only the last location of each pane persists.

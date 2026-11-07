@@ -4,6 +4,10 @@
 
 Private testers should be able to install SC on Windows 11 x64, Ubuntu 24.04 x64, and macOS on Apple Silicon. Test builds are distributed as downloadable artifacts of a manually triggered GitHub Actions run on the public repository.
 
+### Appearance
+
+Start with a compact Radix Themes dark interface with slate neutrals, an amber accent, and square corners. Use 24-pixel file rows, narrow pane gutters, and compact headers and toolbars to maximize visible files with 12-pixel file names and 11-pixel size and date text. Active panes, keyboard focus, cursor, and marked files remain visually distinct.
+
 ### Local browser
 
 Each pane has an editable location, its own history, sortable name, size, and modification columns, and a count and size for the current selection. Start at home and restore the last successful location of each pane. Returning to a parent focuses the folder just left. Directories appear first.

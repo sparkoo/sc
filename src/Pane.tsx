@@ -11,6 +11,8 @@ import { compare, type BrowserPane, type Column, type Entry } from "./browser";
 import { formatBytes } from "./format";
 import { Icon } from "./Icons";
 
+const ROW_HEIGHT = 24;
+
 const date = new Intl.DateTimeFormat(undefined, {
   year: "numeric",
   month: "short",
@@ -51,7 +53,7 @@ export function Pane({
   const virtual = useVirtualizer({
     count: rows.length,
     getScrollElement: () => scroll.current,
-    estimateSize: () => 32,
+    estimateSize: () => ROW_HEIGHT,
     overscan: 12,
   });
   const index = useMemo(
@@ -109,7 +111,7 @@ export function Pane({
     ) {
       const page = Math.max(
         1,
-        Math.floor((scroll.current?.clientHeight ?? 320) / 32),
+        Math.floor((scroll.current?.clientHeight ?? 240) / ROW_HEIGHT),
       );
       const offsets: Record<string, number> = {
         ArrowDown: 1,
@@ -276,7 +278,10 @@ export function Pane({
                   (marked ? " marked" : "") +
                   (index === v.index ? " cursor" : "")
                 }
-                style={{ transform: "translateY(" + v.start + "px)" }}
+                style={{
+                  height: ROW_HEIGHT,
+                  transform: "translateY(" + v.start + "px)",
+                }}
                 onClick={(e) => {
                   focusPane(side);
                   pane.setCursor(entry.id);
