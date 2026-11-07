@@ -1,4 +1,4 @@
-import { Button, Kbd, ThemePanel } from "@radix-ui/themes";
+import { Button, Kbd } from "@radix-ui/themes";
 import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { useBrowser } from "./browser";
@@ -19,7 +19,6 @@ export function App() {
     right = useBrowser(1);
   const panes = [left, right];
   const [active, setActive] = useState(0);
-  const [themePanelSession, setThemePanelSession] = useState(0);
   const [prompt, setPrompt] = useState<Prompt | null>(null);
   const queue = useJobs(() => {
     if (!left.loading) left.refresh();
@@ -81,14 +80,6 @@ export function App() {
           <Icon name="activity" />
           Operations {queue.jobs.length || ""}
         </Button>
-        <Button
-          size="1"
-          variant="soft"
-          aria-controls="theme-panel"
-          onClick={() => setThemePanelSession((session) => session + 1)}
-        >
-          Theme
-        </Button>
       </header>
       <div className="panes">
         {panes.map((pane, side) => (
@@ -106,7 +97,6 @@ export function App() {
         ))}
       </div>
       <JobPanel queue={queue} />
-      <ThemePanel key={themePanelSession} id="theme-panel" defaultOpen />
       <footer className="commands">
         {commands.map((c) => {
           const pane = panes[active];

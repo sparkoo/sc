@@ -6,7 +6,7 @@ Private testers should be able to install SC on Windows 11 x64, Ubuntu 24.04 x64
 
 ### Appearance
 
-Start with a compact Radix Themes dark interface with slate neutrals, an amber accent, and square corners. Open the Radix Theme Panel on launch for live experiments with appearance, accent, neutrals, rounding, and control scale. The header Theme button reopens it after hiding it with its T button. Experiments last for the current app session; Copy Theme copies the configuration. Active panes, keyboard focus, cursor, and marked files remain visually distinct.
+Start with a compact Radix Themes dark interface with slate neutrals, an amber accent, and square corners. Use 24-pixel file rows, narrow pane gutters, and compact headers and toolbars to maximize visible files with 12-pixel file names and 11-pixel size and date text. Active panes, keyboard focus, cursor, and marked files remain visually distinct.
 
 ### Local browser
 
