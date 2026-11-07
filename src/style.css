@@ -2,7 +2,6 @@
   box-sizing: border-box;
 }
 :root {
-  color-scheme: dark;
   font-family: "Segoe UI", system-ui, sans-serif;
   font-size: 13px;
 }
@@ -41,7 +40,7 @@ input:not(.rt-TextFieldInput):focus-visible {
 .app-mark {
   width: 31px;
   height: 31px;
-  border-radius: 8px;
+  border-radius: var(--radius-3);
   background: var(--accent-9);
   color: var(--accent-contrast);
   display: flex;
@@ -80,7 +79,7 @@ h1 strong {
   min-height: 0;
   min-width: 0;
   border: 1px solid var(--gray-6);
-  border-radius: 8px;
+  border-radius: var(--radius-3);
   overflow: hidden;
   background: var(--gray-2);
 }
@@ -139,7 +138,7 @@ button:not(.rt-Button):hover:enabled {
   gap: 4px;
   background: var(--gray-1);
   border: 1px solid var(--gray-6);
-  border-radius: 5px;
+  border-radius: var(--radius-2);
   padding: 1px 4px;
 }
 .location input {
@@ -296,7 +295,7 @@ button:not(.rt-Button):hover:enabled {
   width: min(425px, 90vw);
   padding: 24px;
   border: 1px solid var(--gray-7);
-  border-radius: 10px;
+  border-radius: var(--radius-4);
   background: var(--gray-2);
   color: var(--gray-12);
 }

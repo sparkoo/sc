@@ -6,7 +6,7 @@ Private testers should be able to install SC on Windows 11 x64, Ubuntu 24.04 x64
 
 ### Appearance
 
-Use a compact Radix Themes dark interface with slate neutrals and an iris accent. Active panes, keyboard focus, cursor, and marked files remain visually distinct.
+Start with a compact Radix Themes dark interface with slate neutrals and an iris accent. Open the Radix Theme Panel on launch for live experiments with appearance, accent, neutrals, rounding, and control scale. The header Theme button reopens it after hiding it with its T button. Experiments last for the current app session; Copy Theme copies the configuration. Active panes, keyboard focus, cursor, and marked files remain visually distinct.
 
 ### Local browser
 

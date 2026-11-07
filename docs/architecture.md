@@ -17,7 +17,7 @@ Tauri command boundary (Rust)
 
 ## Frontend styling
 
-A root Radix Themes provider owns the dark appearance, accent, neutral palette, and control sizing. Buttons, keyboard hints, and operation name fields use Radix components. Custom pane and virtualized-row CSS consumes the same theme tokens; native modal dialogs retain the existing focus and submission behavior.
+A root Radix Themes provider owns the appearance, accent, neutral palette, and control sizing. The built-in ThemePanel edits that provider in memory. The header Theme button remounts the panel in its open state without remounting the provider or panes, preserving the current experiment. Theme experiments are not persisted. Buttons, keyboard hints, and operation name fields use Radix components. Custom pane and virtualized-row CSS consumes the same theme tokens; native modal dialogs retain the existing focus and submission behavior.
 
 ## Opening a directory
 
