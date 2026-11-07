@@ -1,3 +1,4 @@
+import { Button, TextField } from "@radix-ui/themes";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
@@ -129,7 +130,7 @@ export function OperationDialog({
         {editName ? (
           <label>
             Name
-            <input
+            <TextField.Root
               required
               autoFocus
               value={name}
@@ -149,12 +150,18 @@ export function OperationDialog({
           </p>
         )}
         <div className="dialog-actions">
-          <button type="button" onClick={close}>
+          <Button size="1" variant="soft" type="button" onClick={close}>
             Cancel
-          </button>
-          <button autoFocus={!editName} className="primary" disabled={sending}>
+          </Button>
+          <Button
+            size="1"
+            variant="solid"
+            type="submit"
+            autoFocus={!editName}
+            disabled={sending}
+          >
             {title}
-          </button>
+          </Button>
         </div>
       </form>
     </dialog>
@@ -228,7 +235,9 @@ export function JobPanel({ queue }: { queue: ReturnType<typeof useJobs> }) {
     <aside className="job-panel" aria-label="File operations">
       <div className="job-heading">
         <h2>Operations</h2>
-        <button onClick={() => queue.setVisible(false)}>Close</button>
+        <Button size="1" variant="soft" onClick={() => queue.setVisible(false)}>
+          Close
+        </Button>
       </div>
       {error && (
         <p className="error" role="alert">
@@ -246,13 +255,17 @@ export function JobPanel({ queue }: { queue: ReturnType<typeof useJobs> }) {
               {job.phase} · {formatBytes(job.bytes)} · {job.records} results
             </span>
             {!complete(job) ? (
-              <button
+              <Button
+                size="1"
+                variant="soft"
                 onClick={() => void queue.send("cancel_job", { id: job.id })}
               >
                 Cancel
-              </button>
+              </Button>
             ) : (
-              <button
+              <Button
+                size="1"
+                variant="soft"
                 onClick={() => {
                   if (report?.id === job.id) {
                     setReport(null);
@@ -264,7 +277,7 @@ export function JobPanel({ queue }: { queue: ReturnType<typeof useJobs> }) {
                 }}
               >
                 Details
-              </button>
+              </Button>
             )}
           </div>
           {job.current && <div className="job-path">{job.current}</div>}
@@ -277,7 +290,9 @@ export function JobPanel({ queue }: { queue: ReturnType<typeof useJobs> }) {
                 "keepBoth",
                 ...(job.conflict.replace ? ["replace"] : []),
               ].map((decision) => (
-                <button
+                <Button
+                  size="1"
+                  variant="soft"
                   key={decision}
                   onClick={() =>
                     void queue.send("answer_conflict", {
@@ -292,7 +307,7 @@ export function JobPanel({ queue }: { queue: ReturnType<typeof useJobs> }) {
                     : decision === "skip"
                       ? "Skip"
                       : "Replace file"}
-                </button>
+                </Button>
               ))}
             </div>
           )}
