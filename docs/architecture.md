@@ -27,7 +27,7 @@ Moves first try an exclusive OS rename. A cross-volume move falls back to a stag
 
 ## File metadata
 
-Regular-file copies use the Windows native copy API to retain alternate data streams and report cancellation. On Unix the staged file receives the source's extended attributes, modification time, and permissions. A metadata-copy error aborts before publishing the staged file.
+Regular-file copies use the Windows native copy API to retain alternate data streams and report cancellation. On Unix the staged file receives the source's extended attributes, modification time, and permissions. A metadata-copy error aborts before publishing the staged file. The source's identity, size, and modification time are checked before publication and again before removal on a move. A detected external edit preserves the source and reports an error.
 
 ## Provider interface
 

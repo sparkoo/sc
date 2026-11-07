@@ -66,6 +66,45 @@ impl Feedback for Observer {
 }
 
 #[test]
+fn keeps_a_source_edited_after_destination_publication() {
+    struct EditAfterCopy {
+        source: PathBuf,
+    }
+    impl Feedback for EditAfterCopy {
+        fn check(&self) -> io::Result<()> {
+            Ok(())
+        }
+        fn conflict(&self, _: &Path, _: bool) -> io::Result<Decision> {
+            Ok(Decision::Skip)
+        }
+        fn progress(&self, _: &Path, _: u64) {}
+        fn record(&self, _: &Path, outcome: &str) {
+            if outcome == "Copied" {
+                fs::write(&self.source, b"new version").unwrap();
+            }
+        }
+    }
+    let root = tempdir().unwrap();
+    let source = root.path().join("source");
+    let destination = root.path().join("destination");
+    fs::write(&source, b"old").unwrap();
+    let feedback = EditAfterCopy {
+        source: source.clone(),
+    };
+    let result = transfer_leaf(
+        &source,
+        &destination,
+        &source.metadata().unwrap(),
+        true,
+        false,
+        &feedback,
+    );
+    assert!(result.unwrap_err().to_string().contains("Source changed"));
+    assert_eq!(fs::read(source).unwrap(), b"new version");
+    assert_eq!(fs::read(destination).unwrap(), b"old");
+}
+
+#[test]
 fn create_rename_and_move_through_public_requests() {
     let root = tempdir().unwrap();
     let observed = Observer::new(Decision::Skip);

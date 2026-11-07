@@ -247,15 +247,22 @@ fn transfer_leaf(
     replace: bool,
     feedback: &dyn Feedback,
 ) -> io::Result<()> {
-    if meta.is_symlink() {
+    let original = if meta.is_symlink() {
         copy_link(source, destination, meta)?;
+        None
     } else if meta.is_file() {
-        copy_file(source, destination, replace, feedback)?;
+        Some(copy_file(source, destination, replace, feedback)?)
     } else {
         return Err(io::Error::other("Unsupported special file"));
-    }
+    };
     feedback.record(destination, "Copied");
     if moving {
+        feedback.check()?;
+        if let Some((identity, before)) = original {
+            unchanged(source, &identity, &before)?;
+        } else if fs::read_link(source)? != fs::read_link(destination)? {
+            return Err(io::Error::other("Source link changed during transfer"));
+        }
         remove_leaf(source, meta)?;
         feedback.record(source, "Removed source");
     }
@@ -267,9 +274,10 @@ fn copy_file(
     destination: &Path,
     replace: bool,
     feedback: &dyn Feedback,
-) -> io::Result<()> {
+) -> io::Result<(same_file::Handle, fs::Metadata)> {
     let input = File::open(source)?;
     let before = input.metadata()?;
+    let identity = same_file::Handle::from_file(input.try_clone()?)?;
     let mut builder = tempfile::Builder::new();
     builder.prefix(".sc-transfer-");
     #[cfg(unix)]
@@ -283,19 +291,24 @@ fn copy_file(
     windows_copy::copy(source, &stage, feedback)?;
     #[cfg(unix)]
     copy_data(source, &input, &stage, feedback)?;
-    let after = fs::symlink_metadata(source)?;
-    if !after.is_file()
-        || before.len() != after.len()
-        || before.modified()? != after.modified()?
-        || same_file::Handle::from_file(input)? != same_file::Handle::from_path(source)?
-    {
-        return Err(io::Error::other("Source changed during transfer"));
-    }
+    unchanged(source, &identity, &before)?;
     feedback.check()?;
     if replace {
         fs::rename(stage, destination)?;
     } else {
         renamore::rename_exclusive(stage, destination)?;
+    }
+    Ok((identity, before))
+}
+
+fn unchanged(source: &Path, identity: &same_file::Handle, before: &fs::Metadata) -> io::Result<()> {
+    let after = fs::symlink_metadata(source)?;
+    if !after.is_file()
+        || before.len() != after.len()
+        || before.modified()? != after.modified()?
+        || *identity != same_file::Handle::from_path(source)?
+    {
+        return Err(io::Error::other("Source changed during transfer"));
     }
     Ok(())
 }
