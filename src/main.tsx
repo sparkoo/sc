@@ -7,11 +7,9 @@ import "./style.css";
 createRoot(document.getElementById("root")!).render(
   <Theme
     appearance="dark"
-    accentColor="iris"
+    accentColor="amber"
     grayColor="slate"
-    radius="medium"
-    scaling="90%"
-    panelBackground="solid"
+    radius="none"
   >
     <App />
   </Theme>,
