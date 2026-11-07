@@ -72,7 +72,8 @@ pub(super) fn copy(source: &Path, target: &Path, feedback: &dyn Feedback) -> io:
     let original = fs::metadata(target)?.permissions();
     if original.readonly() {
         let mut writable = original.clone();
-        #[allow(clippy::permissions_set_readonly_false)] // Windows read-only bit on our staging file.
+        // Windows read-only bit on our staging file.
+        #[allow(clippy::permissions_set_readonly_false)]
         writable.set_readonly(false);
         fs::set_permissions(target, writable)?;
     }
