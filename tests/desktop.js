@@ -10,6 +10,7 @@ async function run(paths) {
   const done = (side) =>
     !panes[side].querySelector(".pane-status").textContent.includes("Reading");
   const metrics = {};
+  const nativeInvoke = window.__TAURI_INTERNALS__.invoke;
   let step = "startup";
   async function until(predicate, description) {
     const start = performance.now();
@@ -85,6 +86,53 @@ async function run(paths) {
   }
   let result;
   try {
+    step = "quick select native places";
+    const places = await window.__TAURI_INTERNALS__.invoke("quick_places");
+    const home = places.find((place) => place.name === "Home");
+    if (!home || !places.length) throw new Error("Missing native places");
+    // Simulate native label queries that never return; all navigation must still work.
+    window.__TAURI_INTERNALS__.invoke = (...args) =>
+      args[0] === "quick_place_label" ? new Promise(() => {}) : nativeInvoke(...args);
+    for (const side of [0, 1]) {
+      const trigger = panes[side].querySelector(".quick-places");
+      trigger.focus();
+      key(trigger, "Enter");
+      await until(() => document.querySelector('[role="menuitem"]')?.title === home.path, "open places by trigger");
+      for (const other of [1 - side, side]) {
+        const next = panes[other].querySelector(".quick-places");
+        next.dispatchEvent(new PointerEvent("pointerdown", {
+          button: 0, ctrlKey: false, pointerType: "mouse", bubbles: true, cancelable: true,
+        }));
+        await delay(150);
+        if (next.getAttribute("aria-expanded") !== "true" ||
+            document.querySelector('[role="menu"]')?.getAttribute("aria-labelledby") !== next.id)
+          throw new Error("Switching triggers dismissed the new menu");
+      }
+      key(document.querySelector('[role="menu"]'), "Escape");
+      await until(() => !document.querySelector('[role="menu"]'), "close switched menu");
+      await navigate(side, paths.source);
+      await until(() => row(side, "alpha.txt") && done(side), "fixture before quick select");
+      list(side).focus();
+      key(list(side), "F4");
+      await until(() => document.querySelector('[role="menuitem"]')?.textContent.includes("Home"), step);
+      for (const place of places) {
+        if (![...document.querySelectorAll('[role="menuitem"]')].some((item) => item.title === place.path))
+          throw new Error("Missing place " + place.path);
+      }
+      const homeItem = [...document.querySelectorAll('[role="menuitem"]')].find((item) => item.title === home.path);
+      homeItem.focus();
+      key(homeItem, "Enter");
+      await until(() => !document.querySelector('[role="menu"]') && done(side) && input(side).value === paths.home && document.activeElement === list(side), "quick select Home and focus");
+      key(list(side), "F4");
+      await until(() => document.querySelector('[role="menu"]'), "reopen places");
+      key(document.querySelector('[role="menu"]'), "Escape");
+      await until(() => !document.querySelector('[role="menu"]') && document.activeElement === list(side), "dismiss places");
+      key(list(side), "F4");
+      await until(() => document.querySelector('[role="menu"]'), "reopen places for Tab");
+      key(document.querySelector('[role="menu"]'), "Tab", { shiftKey: Boolean(side) });
+      await until(() => !document.querySelector('[role="menu"]') && document.activeElement === list(1-side), "switch panes from places");
+    }
+    window.__TAURI_INTERNALS__.invoke = nativeInvoke;
     step = "navigate both panes";
     await navigate(0, paths.source);
     await until(() => row(0, "alpha.txt") && done(0), step);
@@ -219,7 +267,10 @@ async function run(paths) {
       step,
       error: String(err),
       screen: document.body.innerText.slice(-1800),
+      focus: document.activeElement?.outerHTML.slice(0, 1200),
+      triggers: [...document.querySelectorAll(".quick-places")].map((el) => el.outerHTML),
     };
   }
-  await window.__TAURI_INTERNALS__.invoke("frontend_ready", { report: result });
+  window.__TAURI_INTERNALS__.invoke = nativeInvoke;
+  await nativeInvoke("frontend_ready", { report: result });
 }

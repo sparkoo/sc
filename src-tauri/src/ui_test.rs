@@ -24,6 +24,7 @@ pub fn drive(window: &tauri::WebviewWindow, report: Option<serde_json::Value>) {
             .exit(if result["ok"] == true { 0 } else { 1 });
     } else if !STARTED.swap(true, Ordering::SeqCst) {
         let locations = serde_json::json!({
+            "home": dunce::canonicalize(dirs::home_dir().expect("missing home")).expect("resolve home"),
             "source": root.join("source"), "target": root.join("target"), "large": root.join("large"),
             "count": std::env::var("SC_UI_ENTRIES").unwrap().parse::<u32>().unwrap(),
         });

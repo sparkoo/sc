@@ -1,3 +1,4 @@
+import { DropdownMenu } from "@radix-ui/themes";
 import {
   useEffect,
   useMemo,
@@ -10,6 +11,8 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { compare, type BrowserPane, type Column, type Entry } from "./browser";
 import { formatBytes } from "./format";
 import { Icon } from "./Icons";
+
+type Place = { id: string; name: string; path: string };
 
 const ROW_HEIGHT = 24;
 
@@ -28,13 +31,49 @@ export function Pane({
   side,
   active,
   activate,
+  placesOpen,
+  setPlacesOpen,
 }: {
   pane: BrowserPane;
   side: number;
   active: boolean;
   activate(): void;
+  placesOpen: boolean;
+  setPlacesOpen(open: boolean): void;
 }) {
   const [path, setPath] = useState("");
+  const placesTrigger = useRef<HTMLButtonElement>(null);
+  const placesMenu = useRef<HTMLDivElement>(null);
+  const [places, setPlaces] = useState<Place[]>([]);
+  const [placesError, setPlacesError] = useState("");
+  const [placesLoading, setPlacesLoading] = useState(false);
+  useEffect(() => {
+    if (!placesOpen) return;
+    let current = true;
+    setPlacesLoading(true);
+    setPlacesError("");
+    void invoke<Place[]>("quick_places")
+      .then(
+        (items) => {
+          if (!current) return;
+          setPlaces(items);
+          for (const item of items) {
+            if (item.name) continue;
+            void invoke<string>("quick_place_label", { id: item.id }).then(
+              (name) => {
+                if (current && name) setPlaces((previous) => previous.map((place) =>
+                  place.id === item.id ? { ...place, name } : place,
+                ));
+              },
+              () => { /* Optional labels leave the drive-letter fallback in place. */ },
+            );
+          }
+        },
+        (error) => { if (current) setPlacesError(String(error)); },
+      )
+      .finally(() => { if (current) setPlacesLoading(false); });
+    return () => { current = false; };
+  }, [placesOpen]);
   const [sort, setSort] = useState<{ column: Column; reverse: boolean }>({
     column: "name",
     reverse: false,
@@ -198,14 +237,57 @@ export function Pane({
           focusPane(side);
         }}
       >
-        <button
-          type="button"
-          title="Home folder"
-          aria-label="Home folder"
-          onClick={() => pane.navigate("home")}
-        >
-          <Icon name="home" size={16} />
-        </button>
+        <DropdownMenu.Root modal={false} open={placesOpen} onOpenChange={setPlacesOpen}>
+          <DropdownMenu.Trigger>
+            <button
+              type="button"
+              className="quick-places"
+              ref={placesTrigger}
+              title="Quick select (F4)"
+              aria-label={name + " quick select"}
+            >
+              <Icon name="home" size={16} />
+              <span aria-hidden="true">▾</span>
+            </button>
+          </DropdownMenu.Trigger>
+          <DropdownMenu.Content
+            ref={placesMenu}
+            size="1"
+            onKeyDown={(event) => {
+              if (event.key === "Tab") setPlacesOpen(false);
+            }}
+            onCloseAutoFocus={(event) => {
+              event.preventDefault();
+              const focused = document.activeElement;
+              if (
+                focused instanceof HTMLElement && focused !== document.body &&
+                !placesMenu.current?.contains(focused) && focused !== placesTrigger.current
+              ) return;
+              focusPane(side);
+            }}
+          >
+            {placesLoading ? (
+              <DropdownMenu.Item disabled>Loading places…</DropdownMenu.Item>
+            ) : placesError ? (
+              <DropdownMenu.Item disabled title={placesError}>Places unavailable</DropdownMenu.Item>
+            ) : places.map((place) => (
+              <DropdownMenu.Item
+                key={place.id}
+                title={place.path}
+                textValue={place.name || place.path}
+                aria-label={place.name ? `${place.name}, ${place.path}` : place.path}
+                onSelect={() => pane.navigate({ id: place.id })}
+              >
+                {place.name || place.path.replace(/^([a-z]:)\\$/i, "$1")}
+                {place.name !== place.path && (
+                  <span className="place-path">
+                    {/^[a-z]:\\$/i.test(place.path) ? place.path.slice(0, -1) : place.path}
+                  </span>
+                )}
+              </DropdownMenu.Item>
+            ))}
+          </DropdownMenu.Content>
+        </DropdownMenu.Root>
         <input
           aria-label={name + " folder path"}
           value={path}
