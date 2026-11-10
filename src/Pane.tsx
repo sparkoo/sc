@@ -91,6 +91,7 @@ export function Pane({
         name: "..",
         directory: true,
         link: false,
+        hidden: false,
         size: 0,
         modified: null,
       });

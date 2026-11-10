@@ -123,6 +123,7 @@ pub fn list(target: Target, mut send: impl FnMut(Listing) -> bool) -> io::Result
             name: child.file_name().to_string_lossy().into_owned(),
             directory,
             link,
+            hidden: is_hidden(&child.file_name(), &metadata),
             size: if directory { 0 } else { metadata.len() },
             modified: metadata
                 .modified()
@@ -146,9 +147,63 @@ pub fn list(target: Target, mut send: impl FnMut(Listing) -> bool) -> io::Result
     Ok(())
 }
 
+fn is_hidden(name: &std::ffi::OsStr, metadata: &fs::Metadata) -> bool {
+    let dot_name = name.as_encoded_bytes().starts_with(b".");
+    #[cfg(windows)]
+    {
+        use std::os::windows::fs::MetadataExt;
+        dot_name || metadata.file_attributes() & 0x2 != 0
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = metadata;
+        dot_name
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn identifies_hidden_files_and_folders() {
+        let temp = tempfile::tempdir().unwrap();
+        fs::write(temp.path().join("visible"), b"ok").unwrap();
+        fs::write(temp.path().join(".secret"), b"secret").unwrap();
+        fs::create_dir(temp.path().join(".folder")).unwrap();
+        #[cfg(windows)]
+        for name in ["native-file", "native-folder"] {
+            use std::os::windows::ffi::OsStrExt;
+            use windows_sys::Win32::Storage::FileSystem::{
+                SetFileAttributesW, FILE_ATTRIBUTE_HIDDEN,
+            };
+            let path = temp.path().join(name);
+            if name == "native-folder" {
+                fs::create_dir(&path).unwrap();
+            } else {
+                fs::write(&path, b"hidden").unwrap();
+            }
+            let wide: Vec<u16> = path.as_os_str().encode_wide().chain(Some(0)).collect();
+            assert_ne!(
+                unsafe { SetFileAttributesW(wide.as_ptr(), FILE_ATTRIBUTE_HIDDEN) },
+                0
+            );
+        }
+        let mut names = Vec::new();
+        list(Target::Id(entry_id(temp.path())), |message| {
+            if let Listing::Entries(batch) = message {
+                for entry in batch {
+                    assert_eq!(entry.hidden, entry.name != "visible");
+                    names.push(entry.name);
+                }
+            }
+            true
+        })
+        .unwrap();
+        assert!(names.iter().any(|name| name == ".secret"));
+        assert!(names.iter().any(|name| name == ".folder"));
+        assert!(names.iter().any(|name| name == "visible"));
+    }
 
     #[test]
     #[ignore = "creates a 100,000-entry disposable directory"]

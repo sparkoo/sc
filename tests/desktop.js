@@ -143,6 +143,28 @@ async function run(paths) {
         panes[1].querySelector(".empty")?.textContent === "Empty folder",
       step,
     );
+    step = "hidden entries toggle";
+    const hiddenToggle = [...document.querySelectorAll(".commands button")].find(
+      (button) => button.textContent === "Show hidden",
+    );
+    const hiddenNames = [".dot-file", ".dot-folder", "native-hidden-file", "native-hidden-folder",
+      ".native-hidden-file", ".native-hidden-folder"];
+    if (!hiddenToggle || hiddenToggle.getAttribute("aria-pressed") !== "false" || hiddenNames.some((name) => row(0, name)))
+      throw new Error("Hidden entries visible by default");
+    hiddenToggle.click();
+    await until(() => row(0, ".dot-file") && row(0, ".dot-folder"), "show dot entries");
+    if (!row(0, "native-hidden-file") && !row(0, ".native-hidden-file"))
+      throw new Error("Native hidden file missing");
+    await select(0, ".dot-file");
+    key(list(0), " ");
+    await delay();
+    hiddenToggle.click();
+    await until(() => !hiddenNames.some((name) => row(0, name)), "hide entries again");
+    hiddenToggle.click();
+    await until(() => row(0, ".dot-file"), "show entries again");
+    if (panes[0].querySelector(".marked")) throw new Error("Invisible mark was retained");
+    hiddenToggle.click();
+    await delay();
     step = "open and leave a subfolder";
     await select(0, "nested");
     key(list(0), "Enter");

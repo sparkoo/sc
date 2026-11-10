@@ -1,5 +1,5 @@
 import { Channel, invoke } from "@tauri-apps/api/core";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 export type Target = "home" | { id: string } | { path: string };
 export type Folder = {
@@ -13,6 +13,7 @@ export type Entry = {
   name: string;
   directory: boolean;
   link: boolean;
+  hidden: boolean;
   size: number;
   modified: number | null;
 };
@@ -32,14 +33,34 @@ export function compare(a: Entry, b: Entry, column: Column, reverse: boolean) {
   return (reverse ? -1 : 1) * (result || collator.compare(a.name, b.name));
 }
 
-export function useBrowser(pane: number) {
+export function useBrowser(pane: number, showHidden = false) {
   const [folder, setFolder] = useState<Folder | null>(null);
-  const [entries, setEntries] = useState<Entry[]>([]);
+  const [allEntries, setEntries] = useState<Entry[]>([]);
   const [marked, setMarked] = useState<Set<string>>(new Set());
   const [cursor, setCursor] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [history, setHistory] = useState({ items: [] as Folder[], index: -1 });
+  const entries = useMemo(
+    () => showHidden ? allEntries : allEntries.filter((entry) => !entry.hidden),
+    [allEntries, showHidden],
+  );
+  // Exclude invisible marks immediately, including before the cleanup effect runs.
+  const visibleIds = useMemo(() => new Set(entries.map((entry) => entry.id)), [entries]);
+  const visibleMarks = useMemo(
+    () => new Set([...marked].filter((id) => visibleIds.has(id))),
+    [marked, visibleIds],
+  );
+  useEffect(() => {
+    setMarked((previous) => {
+      const next = new Set([...previous].filter((id) => visibleIds.has(id)));
+      return next.size === previous.size ? previous : next;
+    });
+    setCursor((previous) =>
+      !showHidden && allEntries.some((entry) => entry.id === previous && entry.hidden)
+        ? "" : previous,
+    );
+  }, [visibleIds, allEntries, showHidden]);
   const generation = useRef(Date.now() * 1000);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
@@ -136,7 +157,7 @@ export function useBrowser(pane: number) {
   return {
     folder,
     entries,
-    marked,
+    marked: visibleMarks,
     setMarked,
     cursor,
     setCursor,

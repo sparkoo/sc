@@ -15,8 +15,9 @@ import {
 import { Icon } from "./Icons";
 
 export function App() {
-  const left = useBrowser(0),
-    right = useBrowser(1);
+  const [showHidden, setShowHidden] = useState(false);
+  const left = useBrowser(0, showHidden),
+    right = useBrowser(1, showHidden);
   const panes = [left, right];
   const [active, setActive] = useState(0);
   const [placesSide, setPlacesSide] = useState<number | null>(null);
@@ -96,6 +97,18 @@ export function App() {
       </div>
       <JobPanel queue={queue} />
       <footer className="commands">
+        <Button
+          size="1"
+          variant={showHidden ? "solid" : "soft"}
+          aria-pressed={showHidden}
+          title="Show dot files and items with the Windows Hidden attribute in both panes"
+          onClick={() => {
+            setShowHidden((previous) => !previous);
+            focusPane(active);
+          }}
+        >
+          Show hidden
+        </Button>
         {commands.map((c) => {
           const pane = panes[active];
           const count =

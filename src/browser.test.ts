@@ -6,6 +6,7 @@ const item = (name: string, directory = false): Entry => ({
   name,
   directory,
   link: false,
+  hidden: false,
   size: 0,
   modified: null,
 });
