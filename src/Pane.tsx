@@ -42,6 +42,8 @@ export function Pane({
   setPlacesOpen(open: boolean): void;
 }) {
   const [path, setPath] = useState("");
+  const placesTrigger = useRef<HTMLButtonElement>(null);
+  const placesMenu = useRef<HTMLDivElement>(null);
   const [places, setPlaces] = useState<Place[]>([]);
   const [placesError, setPlacesError] = useState("");
   const [placesLoading, setPlacesLoading] = useState(false);
@@ -215,6 +217,7 @@ export function Pane({
             <button
               type="button"
               className="quick-places"
+              ref={placesTrigger}
               title="Quick select (F4)"
               aria-label={name + " quick select"}
             >
@@ -223,6 +226,7 @@ export function Pane({
             </button>
           </DropdownMenu.Trigger>
           <DropdownMenu.Content
+            ref={placesMenu}
             size="1"
             onKeyDown={(event) => {
               if (event.key === "Tab") setPlacesOpen(false);
@@ -232,7 +236,7 @@ export function Pane({
               const focused = document.activeElement;
               if (
                 focused instanceof HTMLElement && focused !== document.body &&
-                !focused.closest('[role="menu"]') && !focused.closest(".quick-places")
+                !placesMenu.current?.contains(focused) && focused !== placesTrigger.current
               ) return;
               focusPane(side);
             }}

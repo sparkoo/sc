@@ -154,7 +154,7 @@ fn linux_volumes(data: &[u8]) -> Vec<Place> {
                 .any(|prefix| mount.starts_with(prefix));
             if mount == b"/"
                 || (!removable && hidden)
-                || !(source.starts_with(b"/dev/") || network || removable)
+                || !(source.starts_with(b"/dev/") || kind == b"zfs" || network || removable)
             {
                 return None;
             }
@@ -259,12 +259,14 @@ mod tests {
 5 1 0:2 / /mnt/share rw - cifs //server/share rw
 6 1 0:3 / /run/media/user/USB rw - fuse volume rw
 7 1 8:4 / /var/lib/data rw - ext4 /dev/sdc1 rw
+8 1 0:4 / /data rw - zfs tank/data rw
+9 1 0:5 / /var/lib/zfs rw - zfs tank/system rw
 malformed
 ";
         let places = linux_volumes(data);
         assert_eq!(
             places.iter().map(|p| p.name.as_str()).collect::<Vec<_>>(),
-            ["My Disk", "share", "USB"]
+            ["My Disk", "share", "USB", "data"]
         );
         assert_eq!(unescape_mount(br"/mnt/a\134b\011c"), b"/mnt/a\\b\tc");
     }

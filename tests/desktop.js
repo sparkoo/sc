@@ -90,6 +90,22 @@ async function run(paths) {
     const home = places.find((place) => place.name === "Home");
     if (!home || !places.length) throw new Error("Missing native places");
     for (const side of [0, 1]) {
+      const trigger = panes[side].querySelector(".quick-places");
+      trigger.focus();
+      key(trigger, "Enter");
+      await until(() => document.querySelector('[role="menuitem"]')?.title === home.path, "open places by trigger");
+      for (const other of [1 - side, side]) {
+        const next = panes[other].querySelector(".quick-places");
+        next.dispatchEvent(new PointerEvent("pointerdown", {
+          button: 0, ctrlKey: false, pointerType: "mouse", bubbles: true, cancelable: true,
+        }));
+        await delay(150);
+        if (next.getAttribute("aria-expanded") !== "true" ||
+            document.querySelector('[role="menu"]')?.getAttribute("aria-labelledby") !== next.id)
+          throw new Error("Switching triggers dismissed the new menu");
+      }
+      key(document.querySelector('[role="menu"]'), "Escape");
+      await until(() => !document.querySelector('[role="menu"]'), "close switched menu");
       await navigate(side, paths.source);
       await until(() => row(side, "alpha.txt") && done(side), "fixture before quick select");
       list(side).focus();
@@ -102,7 +118,7 @@ async function run(paths) {
       const homeItem = [...document.querySelectorAll('[role="menuitem"]')].find((item) => item.title === home.path);
       homeItem.focus();
       key(homeItem, "Enter");
-      await until(() => !document.querySelector('[role="menu"]') && done(side) && input(side).value === home.path && document.activeElement === list(side), "quick select Home and focus");
+      await until(() => !document.querySelector('[role="menu"]') && done(side) && input(side).value === paths.home && document.activeElement === list(side), "quick select Home and focus");
       key(list(side), "F4");
       await until(() => document.querySelector('[role="menu"]'), "reopen places");
       key(document.querySelector('[role="menu"]'), "Escape");

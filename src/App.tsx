@@ -87,7 +87,9 @@ export function App() {
             side={side}
             active={active === side}
             placesOpen={placesSide === side}
-            setPlacesOpen={(open) => setPlacesSide(open ? side : null)}
+            setPlacesOpen={(open) => setPlacesSide((current) =>
+              open ? side : current === side ? null : current,
+            )}
             activate={() => setActive(side)}
           />
         ))}
