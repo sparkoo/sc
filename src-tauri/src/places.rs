@@ -55,13 +55,7 @@ fn volumes() -> io::Result<Vec<Place>> {
         .filter(|i| mask & (1 << i) != 0)
         .map(|i| {
             let path = format!("{}:\\", char::from(b'A' + i));
-            let label = windows_volume_label(&path);
-            let name = if label.is_empty() {
-                path.clone()
-            } else {
-                label
-            };
-            place(PathBuf::from(&path), name)
+            place(PathBuf::from(&path), windows_volume_label(&path))
         })
         .collect())
 }

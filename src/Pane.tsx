@@ -245,10 +245,16 @@ export function Pane({
               <DropdownMenu.Item
                 key={place.id}
                 title={place.path}
+                textValue={place.name || place.path}
+                aria-label={place.name || place.path}
                 onSelect={() => pane.navigate({ id: place.id })}
               >
                 {place.name}
-                {place.name !== place.path && <span className="place-path">{place.path}</span>}
+                {place.name !== place.path && (
+                  <span className="place-path">
+                    {/^[a-z]:\\$/i.test(place.path) ? place.path.slice(0, -1) : place.path}
+                  </span>
+                )}
               </DropdownMenu.Item>
             ))}
           </DropdownMenu.Content>
