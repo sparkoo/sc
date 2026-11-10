@@ -54,7 +54,21 @@ export function Pane({
     setPlacesError("");
     void invoke<Place[]>("quick_places")
       .then(
-        (items) => { if (current) setPlaces(items); },
+        (items) => {
+          if (!current) return;
+          setPlaces(items);
+          for (const item of items) {
+            if (item.name) continue;
+            void invoke<string>("quick_place_label", { id: item.id }).then(
+              (name) => {
+                if (current && name) setPlaces((previous) => previous.map((place) =>
+                  place.id === item.id ? { ...place, name } : place,
+                ));
+              },
+              () => { /* Optional labels leave the drive-letter fallback in place. */ },
+            );
+          }
+        },
         (error) => { if (current) setPlacesError(String(error)); },
       )
       .finally(() => { if (current) setPlacesLoading(false); });

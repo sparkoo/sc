@@ -10,6 +10,7 @@ async function run(paths) {
   const done = (side) =>
     !panes[side].querySelector(".pane-status").textContent.includes("Reading");
   const metrics = {};
+  const nativeInvoke = window.__TAURI_INTERNALS__.invoke;
   let step = "startup";
   async function until(predicate, description) {
     const start = performance.now();
@@ -89,6 +90,9 @@ async function run(paths) {
     const places = await window.__TAURI_INTERNALS__.invoke("quick_places");
     const home = places.find((place) => place.name === "Home");
     if (!home || !places.length) throw new Error("Missing native places");
+    // Simulate native label queries that never return; all navigation must still work.
+    window.__TAURI_INTERNALS__.invoke = (...args) =>
+      args[0] === "quick_place_label" ? new Promise(() => {}) : nativeInvoke(...args);
     for (const side of [0, 1]) {
       const trigger = panes[side].querySelector(".quick-places");
       trigger.focus();
@@ -128,6 +132,7 @@ async function run(paths) {
       key(document.querySelector('[role="menu"]'), "Tab", { shiftKey: Boolean(side) });
       await until(() => !document.querySelector('[role="menu"]') && document.activeElement === list(1-side), "switch panes from places");
     }
+    window.__TAURI_INTERNALS__.invoke = nativeInvoke;
     step = "navigate both panes";
     await navigate(0, paths.source);
     await until(() => row(0, "alpha.txt") && done(0), step);
@@ -266,5 +271,6 @@ async function run(paths) {
       triggers: [...document.querySelectorAll(".quick-places")].map((el) => el.outerHTML),
     };
   }
-  await window.__TAURI_INTERNALS__.invoke("frontend_ready", { report: result });
+  window.__TAURI_INTERNALS__.invoke = nativeInvoke;
+  await nativeInvoke("frontend_ready", { report: result });
 }

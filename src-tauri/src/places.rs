@@ -55,9 +55,37 @@ fn volumes() -> io::Result<Vec<Place>> {
         .filter(|i| mask & (1 << i) != 0)
         .map(|i| {
             let path = format!("{}:\\", char::from(b'A' + i));
-            place(PathBuf::from(&path), windows_volume_label(&path))
+            place(PathBuf::from(&path), String::new())
         })
         .collect())
+}
+
+/// Optional labels are queried independently so offline drives cannot delay locations.
+#[cfg(windows)]
+pub fn label(id: &str) -> io::Result<String> {
+    use std::sync::atomic::{AtomicBool, Ordering};
+    // A stalled native query must not create another blocked worker on every opening.
+    static IN_FLIGHT: [AtomicBool; 26] = [const { AtomicBool::new(false) }; 26];
+    let path = crate::local::resolve(id)?;
+    let path = path
+        .to_str()
+        .ok_or_else(|| io::Error::other("Not a drive root"))?;
+    let bytes = path.as_bytes();
+    if bytes.len() != 3 || !bytes[0].is_ascii_alphabetic() || &bytes[1..] != b":\\" {
+        return Err(io::Error::other("Not a drive root"));
+    }
+    let busy = &IN_FLIGHT[(bytes[0].to_ascii_uppercase() - b'A') as usize];
+    if busy.swap(true, Ordering::SeqCst) {
+        return Ok(String::new());
+    }
+    let name = windows_volume_label(path);
+    busy.store(false, Ordering::SeqCst);
+    Ok(name)
+}
+
+#[cfg(not(windows))]
+pub fn label(_id: &str) -> io::Result<String> {
+    Ok(String::new())
 }
 
 #[cfg(windows)]
@@ -237,6 +265,14 @@ fn volumes() -> io::Result<Vec<Place>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[cfg(windows)]
+    #[test]
+    fn optional_labels_reject_non_drive_roots() {
+        for path in [r"C:\folder", r"\\server\share\"] {
+            assert!(label(&entry_id(std::path::Path::new(path))).is_err());
+        }
+        assert!(label("invalid entry ID").is_err());
+    }
     #[test]
     fn native_places_have_unique_absolute_ids_and_home() {
         let places = list().unwrap();

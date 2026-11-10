@@ -45,6 +45,14 @@ async fn quick_places() -> Result<Vec<places::Place>, String> {
 }
 
 #[tauri::command]
+async fn quick_place_label(id: String) -> Result<String, String> {
+    tauri::async_runtime::spawn_blocking(move || places::label(&id))
+        .await
+        .map_err(|e| e.to_string())?
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 async fn open_file(app: tauri::AppHandle, id: String) -> Result<(), String> {
     tauri::async_runtime::spawn_blocking(move || app.state::<storage::Storage>().open(&id))
         .await
@@ -81,6 +89,7 @@ fn main() {
             frontend_ready,
             list_folder,
             quick_places,
+            quick_place_label,
             open_file,
             jobs::start_job,
             jobs::job_list,
