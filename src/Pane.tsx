@@ -261,7 +261,7 @@ export function Pane({
                 key={place.id}
                 title={place.path}
                 textValue={place.name || place.path}
-                aria-label={place.name || place.path}
+                aria-label={place.name ? `${place.name}, ${place.path}` : place.path}
                 onSelect={() => pane.navigate({ id: place.id })}
               >
                 {place.name || place.path.replace(/^([a-z]:)\\$/i, "$1")}
