@@ -12,7 +12,7 @@ The file panes start at the top of the app content, without an app title header.
 
 ### Local browser
 
-Each pane has an editable location, its own history, sortable name, size, and modification columns, and a count and size for the current selection. Start at home and restore the last successful location of each pane. Returning to a parent focuses the folder just left. Directories appear first.
+Each pane has an editable location, its own history, sortable name, size, and modification columns, and a count and size for the current selection. Start at home and restore the last successful location of each pane. Returning to a parent focuses the folder just left. Directories appear first. When a parent exists, a `..` navigation row stays above all entries regardless of sorting. Enter or double-click opens the parent and focuses the folder just left. This row cannot be marked or used for file operations and is excluded from item counts.
 
 Tab and Shift+Tab switch focus between the two file lists from anywhere in the main window, including location fields and controls outside the panes. Open operation dialogs retain normal Tab navigation between their controls. Arrows move focus, Space marks an item, typing jumps by name, Enter opens a directory or launches a file, and Backspace goes up. Mouse commands mirror the keyboard workflow. Users can reach mounted drives by path.
 

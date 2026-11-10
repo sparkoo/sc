@@ -83,7 +83,9 @@ export function App() {
       <footer className="commands">
         {commands.map((c) => {
           const pane = panes[active];
-          const count = pane.marked.size || (pane.cursor ? 1 : 0);
+          const count =
+            pane.marked.size ||
+            (pane.cursor && pane.cursor !== pane.folder?.parent ? 1 : 0);
           const disabled =
             !pane.folder?.actions.includes(c.action) ||
             pane.loading ||

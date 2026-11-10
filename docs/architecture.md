@@ -23,7 +23,7 @@ A root Radix Themes provider owns the appearance, accent, neutral palette, and c
 
 The app-level keyboard handler owns Tab pane switching across the main window and yields to open operation dialogs. Pane components own file-list navigation and selection keys.
 
-The pane requests a listing with a monotonically increasing generation. Rust enumerates in a worker, encoding native path bytes as opaque IDs so a display name never identifies an operation target. A Tauri channel sends the resolved folder, batches of up to 256 entries, then a completion count of unreadable entries. A new request supersedes earlier generations for that pane. React coalesces incoming updates, sorts directory-first, and virtualizes the rows. Each pane owns its history, cursor and marks. Only the last location of each pane persists.
+The pane requests a listing with a monotonically increasing generation. Rust enumerates in a worker, encoding native path bytes as opaque IDs so a display name never identifies an operation target. A Tauri channel sends the resolved folder, batches of up to 256 entries, then a completion count of unreadable entries. A new request supersedes earlier generations for that pane. React coalesces incoming updates, sorts directory-first, and virtualizes the rows. The frontend prepends a synthetic `..` row using the parent ID supplied by Rust and routes it through the existing parent-navigation action. It stays outside the real entry collection used for operations, marking, and counts. Each pane owns its history, cursor and marks. Only the last location of each pane persists.
 
 ## Copying between panes
 

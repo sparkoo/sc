@@ -99,13 +99,33 @@ async function run(paths) {
     await select(0, "nested");
     key(list(0), "Enter");
     await until(() => input(0).value.endsWith("nested") && done(0), step);
-    key(list(0), "Backspace");
+    await select(0, "..");
+    key(list(0), " ");
+    await delay();
+    if (panes[0].querySelector(".marked"))
+      throw new Error("Parent row was marked");
+    await select(0, "..");
+    key(list(0), "F8");
+    await delay();
+    if (document.querySelector("dialog"))
+      throw new Error("Parent row allowed a file operation");
+    key(list(0), "Enter");
     await until(
       () =>
         row(0, "alpha.txt") &&
         done(0) &&
         panes[0].querySelector(".cursor .file-name")?.textContent === "nested",
       "restored focus",
+    );
+    step = "double-click parent row";
+    await select(0, "nested");
+    key(list(0), "Enter");
+    await until(() => input(0).value.endsWith("nested") && done(0), step);
+    row(0, "..").dispatchEvent(new MouseEvent("dblclick", { bubbles: true }));
+    await until(
+      () => row(0, "alpha.txt") && done(0) &&
+        panes[0].querySelector(".cursor .file-name")?.textContent === "nested",
+      step,
     );
     step = "mark and switch panes";
     await select(0, "alpha.txt");
