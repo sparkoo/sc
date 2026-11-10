@@ -59,7 +59,7 @@ fn volumes() -> io::Result<Vec<Place>> {
             let name = if label.is_empty() {
                 path.clone()
             } else {
-                format!("{}: — {label}", char::from(b'A' + i))
+                format!("({}:) {label}", char::from(b'A' + i))
             };
             place(PathBuf::from(&path), name)
         })
