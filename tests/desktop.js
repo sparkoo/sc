@@ -123,7 +123,7 @@ async function run(paths) {
     for (const control of [
       document.querySelector(".jobs-button"),
       document.querySelector(".commands .switch"),
-      document.querySelector(".app-header h1"),
+      document.querySelector(".commands"),
       input(0),
       panes[0].querySelector(".columns button"),
     ]) {

@@ -68,25 +68,6 @@ export function App() {
   }, [left.loading, right.loading, left.folder, right.folder]);
   return (
     <main className="shell">
-      <header className="app-header">
-        <span className="app-mark" aria-hidden="true">
-          <b>›</b>
-          <i />
-        </span>
-        <h1>
-          SC <strong>Commander</strong>
-        </h1>
-        <Button
-          size="1"
-          variant="soft"
-          className="jobs-button"
-          aria-expanded={queue.visible}
-          onClick={() => queue.setVisible(!queue.visible)}
-        >
-          <Icon name="activity" />
-          Operations {queue.jobs.length || ""}
-        </Button>
-      </header>
       <div className="panes">
         {panes.map((pane, side) => (
           <Pane
@@ -133,6 +114,16 @@ export function App() {
           }}
         >
           <Kbd>Tab</Kbd>Switch pane
+        </Button>
+        <Button
+          size="1"
+          variant="soft"
+          className="jobs-button"
+          aria-expanded={queue.visible}
+          onClick={() => queue.setVisible(!queue.visible)}
+        >
+          <Icon name="activity" />
+          Operations {queue.jobs.length || ""}
         </Button>
       </footer>
       {prompt && (

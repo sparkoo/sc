@@ -30,41 +30,6 @@ input:not(.rt-TextFieldInput):focus-visible {
   display: flex;
   flex-direction: column;
 }
-.app-header {
-  min-height: 38px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 0 6px;
-}
-.app-mark {
-  width: 24px;
-  height: 24px;
-  border-radius: var(--radius-3);
-  background: var(--accent-9);
-  color: var(--accent-contrast);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 2px;
-}
-.app-mark b {
-  font: bold 23px/1 monospace;
-}
-.app-mark i {
-  width: 7px;
-  border-bottom: 2px solid;
-  transform: translateY(6px);
-}
-h1 {
-  font-size: 14px;
-  font-weight: 700;
-  margin: 0;
-  letter-spacing: -0.4px;
-}
-h1 strong {
-  font-weight: 450;
-}
 .panes {
   flex: 1;
   display: grid;
@@ -285,7 +250,6 @@ button:not(.rt-Button):hover:enabled {
     padding-inline: 6px;
   }
 }
-.jobs-button,
 .commands .switch {
   margin-left: auto;
 }
