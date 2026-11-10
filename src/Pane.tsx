@@ -41,13 +41,22 @@ export function Pane({
   });
   const scroll = useRef<HTMLDivElement>(null);
   const search = useRef({ prefix: "", time: 0 });
-  const rows = useMemo(
-    () =>
-      [...pane.entries].sort((a, b) =>
-        compare(a, b, sort.column, sort.reverse),
-      ),
-    [pane.entries, sort],
-  );
+  const parent = pane.folder?.parent;
+  const rows = useMemo(() => {
+    const entries = [...pane.entries].sort((a, b) =>
+      compare(a, b, sort.column, sort.reverse),
+    );
+    if (parent)
+      entries.unshift({
+        id: parent,
+        name: "..",
+        directory: true,
+        link: false,
+        size: 0,
+        modified: null,
+      });
+    return entries;
+  }, [pane.entries, parent, sort]);
   const virtual = useVirtualizer({
     count: rows.length,
     getScrollElement: () => scroll.current,
@@ -74,13 +83,15 @@ export function Pane({
   }, [index, virtual]);
 
   function open(entry: Entry) {
-    if (entry.directory) pane.navigate({ id: entry.id });
+    if (entry.id === parent) pane.up();
+    else if (entry.directory) pane.navigate({ id: entry.id });
     else
       void invoke("open_file", { id: entry.id }).catch((e) =>
         pane.setError(String(e)),
       );
   }
   function toggle(id: string) {
+    if (id === parent) return;
     pane.setMarked((previous) => {
       const next = new Set(previous);
       if (next.has(id)) next.delete(id);
@@ -99,7 +110,7 @@ export function Pane({
       toggle(item.id);
       if (rows[index + 1]) pane.setCursor(rows[index + 1].id);
     } else if ((event.ctrlKey || event.metaKey) && key.toLowerCase() === "a")
-      pane.setMarked(new Set(rows.map((e) => e.id)));
+      pane.setMarked(new Set(pane.entries.map((e) => e.id)));
     else if (
       ["ArrowDown", "ArrowUp", "Home", "End", "PageDown", "PageUp"].includes(
         key,
@@ -249,7 +260,7 @@ export function Pane({
         ref={scroll}
         onKeyDown={key}
       >
-        {rows.length === 0 && (
+        {pane.entries.length === 0 && (
           <div className="empty">
             {pane.loading
               ? "Reading folder…"
@@ -324,7 +335,7 @@ export function Pane({
       )}
       <div className="pane-status">
         <span className="dot" />
-        {rows.length.toLocaleString()} items{pane.loading && " · Reading…"}
+        {pane.entries.length.toLocaleString()} items{pane.loading && " · Reading…"}
         <span className="status-selection">
           {selected.length
             ? selected.length +
