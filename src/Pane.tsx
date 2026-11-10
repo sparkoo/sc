@@ -249,7 +249,7 @@ export function Pane({
                 aria-label={place.name || place.path}
                 onSelect={() => pane.navigate({ id: place.id })}
               >
-                {place.name}
+                {place.name || place.path.replace(/^([a-z]:)\\$/i, "$1")}
                 {place.name !== place.path && (
                   <span className="place-path">
                     {/^[a-z]:\\$/i.test(place.path) ? place.path.slice(0, -1) : place.path}
