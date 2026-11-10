@@ -35,19 +35,25 @@ export function App() {
         prompt ||
         event.ctrlKey ||
         event.altKey ||
-        event.metaKey ||
-        event.shiftKey ||
-        event.target instanceof HTMLInputElement
+        event.metaKey
       )
         return;
+      const pane =
+        event.target instanceof Element
+          ? event.target.closest<HTMLElement>(".pane")
+          : null;
+      const side = pane ? Number(pane.dataset.side) : active;
+      if (event.key === "Tab") {
+        event.preventDefault();
+        setActive(1 - side);
+        focusPane(1 - side);
+        return;
+      }
+      if (event.shiftKey || event.target instanceof HTMLInputElement) return;
       const command = commands.find((c) => c.key === event.key);
       if (command) {
         event.preventDefault();
-        const pane =
-          event.target instanceof Element
-            ? event.target.closest<HTMLElement>(".pane")
-            : null;
-        begin(command.action, pane ? Number(pane.dataset.side) : active);
+        begin(command.action, side);
       }
     }
     window.addEventListener("keydown", shortcuts);
@@ -89,10 +95,6 @@ export function App() {
             side={side}
             active={active === side}
             activate={() => setActive(side)}
-            switchPane={() => {
-              setActive(1 - side);
-              focusPane(1 - side);
-            }}
           />
         ))}
       </div>
