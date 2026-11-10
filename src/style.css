@@ -351,3 +351,15 @@ pre {
 .radix-themes {
   --default-font-family: "Segoe UI", system-ui, sans-serif;
 }
+
+.location .quick-places { width: 38px; gap: 3px; }
+.place-path {
+  margin-left: auto;
+  padding-left: 16px;
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--gray-11);
+  font-size: 11px;
+}

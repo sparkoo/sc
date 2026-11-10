@@ -85,6 +85,33 @@ async function run(paths) {
   }
   let result;
   try {
+    step = "quick select native places";
+    const places = await window.__TAURI_INTERNALS__.invoke("quick_places");
+    const home = places.find((place) => place.name === "Home");
+    if (!home || !places.length) throw new Error("Missing native places");
+    for (const side of [0, 1]) {
+      await navigate(side, paths.source);
+      await until(() => row(side, "alpha.txt") && done(side), "fixture before quick select");
+      list(side).focus();
+      key(list(side), "F4");
+      await until(() => document.querySelector('[role="menuitem"]')?.textContent.includes("Home"), step);
+      for (const place of places) {
+        if (![...document.querySelectorAll('[role="menuitem"]')].some((item) => item.title === place.path))
+          throw new Error("Missing place " + place.path);
+      }
+      const homeItem = [...document.querySelectorAll('[role="menuitem"]')].find((item) => item.title === home.path);
+      homeItem.focus();
+      key(homeItem, "Enter");
+      await until(() => !document.querySelector('[role="menu"]') && done(side) && input(side).value === home.path && document.activeElement === list(side), "quick select Home and focus");
+      key(list(side), "F4");
+      await until(() => document.querySelector('[role="menu"]'), "reopen places");
+      key(document.querySelector('[role="menu"]'), "Escape");
+      await until(() => !document.querySelector('[role="menu"]') && document.activeElement === list(side), "dismiss places");
+      key(list(side), "F4");
+      await until(() => document.querySelector('[role="menu"]'), "reopen places for Tab");
+      key(document.querySelector('[role="menu"]'), "Tab", { shiftKey: Boolean(side) });
+      await until(() => !document.querySelector('[role="menu"]') && document.activeElement === list(1-side), "switch panes from places");
+    }
     step = "navigate both panes";
     await navigate(0, paths.source);
     await until(() => row(0, "alpha.txt") && done(0), step);
@@ -199,6 +226,8 @@ async function run(paths) {
       step,
       error: String(err),
       screen: document.body.innerText.slice(-1800),
+      focus: document.activeElement?.outerHTML.slice(0, 1200),
+      triggers: [...document.querySelectorAll(".quick-places")].map((el) => el.outerHTML),
     };
   }
   await window.__TAURI_INTERNALS__.invoke("frontend_ready", { report: result });

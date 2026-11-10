@@ -19,6 +19,7 @@ export function App() {
     right = useBrowser(1);
   const panes = [left, right];
   const [active, setActive] = useState(0);
+  const [placesSide, setPlacesSide] = useState<number | null>(null);
   const [prompt, setPrompt] = useState<Prompt | null>(null);
   const queue = useJobs(() => {
     if (!left.loading) left.refresh();
@@ -45,8 +46,18 @@ export function App() {
       const side = pane ? Number(pane.dataset.side) : active;
       if (event.key === "Tab") {
         event.preventDefault();
+        setPlacesSide(null);
         setActive(1 - side);
         focusPane(1 - side);
+        return;
+      }
+      if (
+        event.target instanceof Element &&
+        event.target.closest('[role="menu"]')
+      ) return;
+      if (event.key === "F4") {
+        event.preventDefault();
+        setPlacesSide(side);
         return;
       }
       if (event.shiftKey || event.target instanceof HTMLInputElement) return;
@@ -75,6 +86,8 @@ export function App() {
             pane={pane}
             side={side}
             active={active === side}
+            placesOpen={placesSide === side}
+            setPlacesOpen={(open) => setPlacesSide(open ? side : null)}
             activate={() => setActive(side)}
           />
         ))}

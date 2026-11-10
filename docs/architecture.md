@@ -23,6 +23,8 @@ A root Radix Themes provider owns the appearance, accent, neutral palette, and c
 
 The app-level keyboard handler owns Tab pane switching across the main window and yields to open operation dialogs. Pane components own file-list navigation and selection keys.
 
+The `quick_places` command runs native location discovery in a Rust worker and returns display names, display paths, and opaque native path IDs. Windows uses assigned logical drive letters and native volume labels (falling back to the drive letter when unavailable), Linux decodes `/proc/self/mountinfo` while filtering system mounts, and macOS reads the native mount table for `/Volumes` entries. The frontend refreshes this list on each menu opening and navigates using IDs through the existing listing command. The app coordinates which pane's menu is open and handles F4; pane components own menu rendering, loading, and focus.
+
 The pane requests a listing with a monotonically increasing generation. Rust enumerates in a worker, encoding native path bytes as opaque IDs so a display name never identifies an operation target. A Tauri channel sends the resolved folder, batches of up to 256 entries, then a completion count of unreadable entries. A new request supersedes earlier generations for that pane. React coalesces incoming updates, sorts directory-first, and virtualizes the rows. Each pane owns its history, cursor and marks. Only the last location of each pane persists.
 
 ## Copying between panes
