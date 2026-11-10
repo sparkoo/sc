@@ -28,13 +28,11 @@ export function Pane({
   side,
   active,
   activate,
-  switchPane,
 }: {
   pane: BrowserPane;
   side: number;
   active: boolean;
   activate(): void;
-  switchPane(): void;
 }) {
   const [path, setPath] = useState("");
   const [sort, setSort] = useState<{ column: Column; reverse: boolean }>({
@@ -93,8 +91,7 @@ export function Pane({
   function key(event: KeyboardEvent) {
     const item = rows[index];
     const key = event.key;
-    if (key === "Tab") switchPane();
-    else if (event.altKey && key === "ArrowLeft") pane.goHistory(-1);
+    if (event.altKey && key === "ArrowLeft") pane.goHistory(-1);
     else if (event.altKey && key === "ArrowRight") pane.goHistory(1);
     else if (key === "Backspace") pane.up();
     else if (key === "Enter" && item) open(item);

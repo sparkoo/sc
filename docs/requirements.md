@@ -12,7 +12,7 @@ Start with a compact Radix Themes dark interface with slate neutrals, an amber a
 
 Each pane has an editable location, its own history, sortable name, size, and modification columns, and a count and size for the current selection. Start at home and restore the last successful location of each pane. Returning to a parent focuses the folder just left. Directories appear first.
 
-Tab switches panes, arrows move focus, Space marks an item, typing jumps by name, Enter opens a directory or launches a file, and Backspace goes up. Mouse commands mirror the keyboard workflow. Users can reach mounted drives by path.
+Tab and Shift+Tab switch focus between the two file lists from anywhere in the main window, including location fields and controls outside the panes. Open operation dialogs retain normal Tab navigation between their controls. Arrows move focus, Space marks an item, typing jumps by name, Enter opens a directory or launches a file, and Backspace goes up. Mouse commands mirror the keyboard workflow. Users can reach mounted drives by path.
 
 ### Local operations
 

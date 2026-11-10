@@ -19,12 +19,13 @@ async function run(paths) {
       await delay();
     }
   }
-  function key(el, value) {
-    el.dispatchEvent(
+  function key(el, value, modifiers = {}) {
+    return el.dispatchEvent(
       new KeyboardEvent("keydown", {
         key: value,
         bubbles: true,
         cancelable: true,
+        ...modifiers,
       }),
     );
   }
@@ -61,6 +62,10 @@ async function run(paths) {
       "confirmation for " + shortcut,
     );
     const form = document.querySelector("dialog form");
+    const control = form.querySelector("input, button");
+    control.focus();
+    if (!key(control, "Tab") || document.activeElement !== control)
+      throw new Error("Pane switching intercepted dialog Tab");
     if (name) await setInput(form.querySelector("input"), name);
     form.requestSubmit();
     await until(
@@ -114,6 +119,23 @@ async function run(paths) {
         "alpha.txt",
       step,
     );
+    step = "switch panes from outside the file lists";
+    for (const control of [
+      document.querySelector(".jobs-button"),
+      document.querySelector(".commands .switch"),
+      document.querySelector(".app-header h1"),
+      input(0),
+      panes[0].querySelector(".columns button"),
+    ]) {
+      list(0).focus();
+      await delay();
+      control.focus();
+      if (key(control, "Tab") || document.activeElement !== list(1))
+        throw new Error("Tab did not switch panes from " + control.outerHTML);
+      await delay();
+      if (key(list(1), "Tab", { shiftKey: true }) || document.activeElement !== list(0))
+        throw new Error("Shift+Tab did not switch back");
+    }
     step = "copy";
     await command(0, "F5");
     await job(1);
