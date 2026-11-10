@@ -243,7 +243,7 @@ export function Pane({
               : column === "size"
                 ? "Size"
                 : "Modified"}{" "}
-            {sort.column === column && (sort.reverse ? "â†“" : "â†‘")}
+            {sort.column === column && (sort.reverse ? "↓" : "↑")}
           </button>
         ))}
       </div>
@@ -263,7 +263,7 @@ export function Pane({
         {pane.entries.length === 0 && (
           <div className="empty">
             {pane.loading
-              ? "Reading folderâ€¦"
+              ? "Reading folder…"
               : pane.error
                 ? "Folder unavailable"
                 : "Empty folder"}
@@ -316,11 +316,11 @@ export function Pane({
                   <span>{entry.name}</span>
                 </span>
                 <span className="file-size">
-                  {entry.directory ? "â€”" : formatBytes(entry.size)}
+                  {entry.directory ? "—" : formatBytes(entry.size)}
                 </span>
                 <span className="file-date">
                   {entry.modified === null
-                    ? "â€”"
+                    ? "—"
                     : date.format(entry.modified * 1000)}
                 </span>
               </div>
@@ -335,11 +335,11 @@ export function Pane({
       )}
       <div className="pane-status">
         <span className="dot" />
-        {pane.entries.length.toLocaleString()} items{pane.loading && " Â· Readingâ€¦"}
+        {pane.entries.length.toLocaleString()} items{pane.loading && " · Reading…"}
         <span className="status-selection">
           {selected.length
             ? selected.length +
-              " marked Â· " +
+              " marked · " +
               formatBytes(selected.reduce((n, e) => n + e.size, 0))
             : ""}
         </span>
