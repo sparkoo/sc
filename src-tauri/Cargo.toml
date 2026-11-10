@@ -27,7 +27,7 @@ tempfile = "3"
 xattr = "1"
 
 [target.'cfg(windows)'.dependencies]
-windows-sys = { version = "0.61", features = ["Win32_Storage_FileSystem", "Win32_Foundation"] }
+windows-sys = { version = "0.61", features = ["Win32_Storage_FileSystem", "Win32_Foundation", "Win32_System_Diagnostics_Debug"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
 libc = "0.2"

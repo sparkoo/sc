@@ -46,7 +46,7 @@ pub fn list() -> io::Result<Vec<Place>> {
 #[cfg(windows)]
 fn volumes() -> io::Result<Vec<Place>> {
     use windows_sys::Win32::Storage::FileSystem::GetLogicalDrives;
-    // This returns assigned drive letters without touching potentially offline media.
+    // Enumerate assigned drive letters before resolving optional display labels.
     let mask = unsafe { GetLogicalDrives() };
     if mask == 0 {
         return Err(io::Error::last_os_error());
@@ -55,9 +55,59 @@ fn volumes() -> io::Result<Vec<Place>> {
         .filter(|i| mask & (1 << i) != 0)
         .map(|i| {
             let path = format!("{}:\\", char::from(b'A' + i));
-            place(PathBuf::from(&path), path)
+            let label = windows_volume_label(&path);
+            let name = if label.is_empty() {
+                path.clone()
+            } else {
+                format!("{label} ({}:)", char::from(b'A' + i))
+            };
+            place(PathBuf::from(&path), name)
         })
         .collect())
+}
+
+#[cfg(windows)]
+fn windows_volume_label(path: &str) -> String {
+    use std::{os::windows::ffi::OsStrExt, ptr};
+    use windows_sys::Win32::{
+        Storage::FileSystem::GetVolumeInformationW,
+        System::Diagnostics::Debug::{
+            GetThreadErrorMode, SetThreadErrorMode, SEM_FAILCRITICALERRORS,
+        },
+    };
+    let root: Vec<u16> = std::ffi::OsStr::new(path)
+        .encode_wide()
+        .chain(Some(0))
+        .collect();
+    let mut label = [0u16; 261];
+    // An empty removable drive must never open an OS "insert disk" dialog.
+    let old_mode = unsafe { GetThreadErrorMode() };
+    if unsafe { SetThreadErrorMode(old_mode | SEM_FAILCRITICALERRORS, ptr::null_mut()) } == 0 {
+        return String::new();
+    }
+    let success = unsafe {
+        GetVolumeInformationW(
+            root.as_ptr(),
+            label.as_mut_ptr(),
+            label.len() as u32,
+            ptr::null_mut(),
+            ptr::null_mut(),
+            ptr::null_mut(),
+            ptr::null_mut(),
+            0,
+        )
+    };
+    unsafe {
+        SetThreadErrorMode(old_mode, ptr::null_mut());
+    }
+    if success == 0 {
+        return String::new();
+    }
+    let end = label
+        .iter()
+        .position(|unit| *unit == 0)
+        .unwrap_or(label.len());
+    String::from_utf16_lossy(&label[..end])
 }
 
 #[cfg(target_os = "linux")]
