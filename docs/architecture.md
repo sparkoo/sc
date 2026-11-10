@@ -21,7 +21,7 @@ A root Radix Themes provider owns the appearance, accent, neutral palette, and c
 
 ## Opening a directory
 
-The app-level keyboard handler owns Tab pane switching across the main window and yields to open operation dialogs. Pane components own file-list navigation and selection keys.
+The app-level keyboard handler owns the platform-specific hidden-items shortcut and Tab pane switching across the main window and yields to open operation dialogs. Pane components own file-list navigation and selection keys. On macOS, Rust removes the default native Hide menu item so Cmd+H reaches the frontend instead of hiding the application.
 
 The `quick_places` command runs native location discovery in a Rust worker and returns display names, display paths, and opaque native path IDs. Windows initially returns assigned logical drive letters with empty names. The frontend requests optional native labels separately through `quick_place_label`, applies each result independently, and retains letter fallbacks for missing or pending labels. Rust limits native label queries to one in-flight worker per drive letter, so repeatedly opening the menu cannot accumulate stalled queries. Linux decodes `/proc/self/mountinfo` while filtering system mounts, and macOS reads the native mount table for `/Volumes` entries. The frontend refreshes this list on each menu opening and navigates using IDs through the existing listing command. The app coordinates which pane's menu is open and handles F4; pane components own menu rendering, loading, and focus.
 

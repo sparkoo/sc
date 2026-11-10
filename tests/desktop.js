@@ -145,21 +145,27 @@ async function run(paths) {
     );
     step = "hidden entries toggle";
     const hiddenToggle = [...document.querySelectorAll(".commands button")].find(
-      (button) => button.textContent === "Show hidden",
+      (button) => button.textContent.endsWith("Show hidden"),
     );
     const hiddenNames = [".dot-file", ".dot-folder", "native-hidden-file", "native-hidden-folder",
       ".native-hidden-file", ".native-hidden-folder"];
     if (!hiddenToggle || hiddenToggle.getAttribute("aria-pressed") !== "false" || hiddenNames.some((name) => row(0, name)))
       throw new Error("Hidden entries visible by default");
-    hiddenToggle.click();
-    await until(() => row(0, ".dot-file") && row(0, ".dot-folder"), "show dot entries");
+    const hiddenModifiers = /Mac/i.test(navigator.platform) ? { metaKey: true } : { ctrlKey: true };
+    input(0).focus();
+    if (key(input(0), "h", hiddenModifiers)) throw new Error("Hidden shortcut was not handled");
+    await until(() => row(0, ".dot-file") && row(0, ".dot-folder"), "show dot entries by shortcut");
+    if (document.activeElement !== input(0)) throw new Error("Shortcut stole location focus");
+    key(input(0), "h", { ...hiddenModifiers, repeat: true });
+    await delay();
+    if (!row(0, ".dot-file")) throw new Error("Repeated key toggled hidden entries");
     if (!row(0, "native-hidden-file") && !row(0, ".native-hidden-file"))
       throw new Error("Native hidden file missing");
     await select(0, ".dot-file");
     key(list(0), " ");
     await delay();
-    hiddenToggle.click();
-    await until(() => !hiddenNames.some((name) => row(0, name)), "hide entries again");
+    key(list(0), "h", hiddenModifiers);
+    await until(() => !hiddenNames.some((name) => row(0, name)), "hide entries by shortcut");
     hiddenToggle.click();
     await until(() => row(0, ".dot-file"), "show entries again");
     if (panes[0].querySelector(".marked")) throw new Error("Invisible mark was retained");
