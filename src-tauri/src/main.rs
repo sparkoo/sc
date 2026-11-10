@@ -2,6 +2,7 @@
 
 mod jobs;
 mod local;
+mod places;
 mod storage;
 mod transfer;
 #[cfg(feature = "ui-test")]
@@ -33,6 +34,14 @@ async fn list_folder(
     .await
     .map_err(|e| e.to_string())?
     .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn quick_places() -> Result<Vec<places::Place>, String> {
+    tauri::async_runtime::spawn_blocking(places::list)
+        .await
+        .map_err(|e| e.to_string())?
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -71,6 +80,7 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             frontend_ready,
             list_folder,
+            quick_places,
             open_file,
             jobs::start_job,
             jobs::job_list,
