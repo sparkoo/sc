@@ -151,12 +151,18 @@ async function run(paths) {
       ".native-hidden-file", ".native-hidden-folder"];
     if (!hiddenToggle || hiddenToggle.getAttribute("aria-pressed") !== "false" || hiddenNames.some((name) => row(0, name)))
       throw new Error("Hidden entries visible by default");
-    const hiddenModifiers = /Mac/i.test(navigator.platform) ? { metaKey: true } : { ctrlKey: true };
+    const isMac = /Mac/i.test(navigator.platform);
+    const hiddenKey = isMac ? ">" : "h";
+    const hiddenModifiers = isMac
+      ? { code: "Period", metaKey: true, shiftKey: true }
+      : { ctrlKey: true };
     input(0).focus();
-    if (key(input(0), "h", hiddenModifiers)) throw new Error("Hidden shortcut was not handled");
+    if (isMac && !key(input(0), "h", { metaKey: true }))
+      throw new Error("Hidden shortcut intercepted Cmd+H");
+    if (key(input(0), hiddenKey, hiddenModifiers)) throw new Error("Hidden shortcut was not handled");
     await until(() => row(0, ".dot-file") && row(0, ".dot-folder"), "show dot entries by shortcut");
     if (document.activeElement !== input(0)) throw new Error("Shortcut stole location focus");
-    key(input(0), "h", { ...hiddenModifiers, repeat: true });
+    key(input(0), hiddenKey, { ...hiddenModifiers, repeat: true });
     await delay();
     if (!row(0, ".dot-file")) throw new Error("Repeated key toggled hidden entries");
     if (!row(0, "native-hidden-file") && !row(0, ".native-hidden-file"))
@@ -164,7 +170,7 @@ async function run(paths) {
     await select(0, ".dot-file");
     key(list(0), " ");
     await delay();
-    key(list(0), "h", hiddenModifiers);
+    key(list(0), hiddenKey, hiddenModifiers);
     await until(() => !hiddenNames.some((name) => row(0, name)), "hide entries by shortcut");
     hiddenToggle.click();
     await until(() => row(0, ".dot-file"), "show entries again");

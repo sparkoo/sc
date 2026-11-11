@@ -15,7 +15,7 @@ import {
 import { Icon } from "./Icons";
 
 const isMac = /Mac/i.test(navigator.platform);
-const hiddenShortcut = isMac ? "Cmd+H" : "Ctrl+H";
+const hiddenShortcut = isMac ? "Cmd+Shift+." : "Ctrl+H";
 
 export function App() {
   const [showHidden, setShowHidden] = useState(false);
@@ -37,11 +37,10 @@ export function App() {
   useEffect(() => {
     function shortcuts(event: KeyboardEvent) {
       if (prompt) return;
-      if (
-        event.key.toLowerCase() === "h" &&
-        (isMac ? event.metaKey && !event.ctrlKey : event.ctrlKey && !event.metaKey) &&
-        !event.altKey && !event.shiftKey
-      ) {
+      const togglesHidden = isMac
+        ? event.metaKey && event.shiftKey && !event.ctrlKey && event.code === "Period"
+        : event.ctrlKey && !event.shiftKey && !event.metaKey && event.key.toLowerCase() === "h";
+      if (togglesHidden && !event.altKey) {
         event.preventDefault();
         if (!event.repeat) {
           setPlacesSide(null);
@@ -116,7 +115,7 @@ export function App() {
           size="1"
           variant={showHidden ? "solid" : "soft"}
           aria-pressed={showHidden}
-          aria-keyshortcuts={isMac ? "Meta+h" : "Control+h"}
+          aria-keyshortcuts={isMac ? "Meta+Shift+." : "Control+h"}
           title="Show dot files and items with the Windows Hidden attribute in both panes"
           onClick={() => {
             setShowHidden((previous) => !previous);

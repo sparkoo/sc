@@ -73,26 +73,7 @@ fn frontend_ready(window: tauri::WebviewWindow, report: Option<serde_json::Value
 
 fn main() {
     let provider: storage::Storage = std::sync::Arc::new(local::LocalStorage);
-    let builder = tauri::Builder::default();
-    #[cfg(target_os = "macos")]
-    let builder = builder.menu(|app| {
-        let menu = tauri::menu::Menu::default(app)?;
-        // Let the frontend receive Cmd+H instead of the native Hide action.
-        let hide_text = tauri::menu::PredefinedMenuItem::hide(app, None)?.text()?;
-        for item in menu.items()? {
-            if let tauri::menu::MenuItemKind::Submenu(submenu) = item {
-                for child in submenu.items()? {
-                    if let tauri::menu::MenuItemKind::Predefined(item) = child {
-                        if item.text()? == hide_text {
-                            submenu.remove(&item)?;
-                        }
-                    }
-                }
-            }
-        }
-        Ok(menu)
-    });
-    builder
+    tauri::Builder::default()
         .manage(provider.clone())
         .manage(Browsers::default())
         .manage(jobs::Queue::new(provider))
