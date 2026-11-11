@@ -80,6 +80,7 @@ export function Pane({
   });
   const scroll = useRef<HTMLDivElement>(null);
   const search = useRef({ prefix: "", time: 0 });
+  const rightDrag = useRef<{ rows: Entry[]; index: number } | null>(null);
   const parent = pane.folder?.parent;
   const rows = useMemo(() => {
     const entries = [...pane.entries].sort((a, b) =>
@@ -138,6 +139,25 @@ export function Pane({
       else next.add(id);
       return next;
     });
+  }
+  function extendRightDrag(nextIndex: number, buttons: number) {
+    const drag = rightDrag.current;
+    if (!drag || drag.rows !== rows || !(buttons & 2)) {
+      rightDrag.current = null;
+      return;
+    }
+    if (drag.index === nextIndex) return;
+    const start = Math.min(drag.index, nextIndex);
+    const end = Math.max(drag.index, nextIndex);
+    drag.index = nextIndex;
+    pane.setMarked((previous) => {
+      const next = new Set(previous);
+      for (const entry of rows.slice(start, end + 1)) {
+        if (entry.id !== parent) next.add(entry.id);
+      }
+      return next;
+    });
+    if (rows[nextIndex].id !== parent) pane.setCursor(rows[nextIndex].id);
   }
   function key(event: KeyboardEvent) {
     const item = rows[index];
@@ -352,7 +372,14 @@ export function Pane({
                 : "Empty folder"}
           </div>
         )}
-        <div className="row-space" style={{ height: virtual.getTotalSize() }}>
+        <div
+          className="row-space"
+          style={{ height: virtual.getTotalSize() }}
+          onMouseLeave={() => { rightDrag.current = null; }}
+          onMouseUp={(e) => {
+            if (e.button === 2) rightDrag.current = null;
+          }}
+        >
           {virtual.getVirtualItems().map((v) => {
             const entry = rows[v.index];
             const marked = pane.marked.has(entry.id);
@@ -379,13 +406,17 @@ export function Pane({
                   if (e.ctrlKey || e.metaKey) toggle(entry.id);
                   else pane.setMarked(new Set());
                 }}
-                onContextMenu={(e) => {
+                onContextMenu={(e) => e.preventDefault()}
+                onMouseDown={(e) => {
+                  if (e.button !== 2) return;
                   e.preventDefault();
-                  if (e.button !== 2 || entry.id === parent) return;
+                  if (entry.id === parent) return;
+                  rightDrag.current = { rows, index: v.index };
                   focusPane(side);
                   pane.setCursor(entry.id);
                   toggle(entry.id);
                 }}
+                onMouseEnter={(e) => extendRightDrag(v.index, e.buttons)}
                 onDoubleClick={() => open(entry)}
               >
                 <span className="file-name" title={entry.name}>
