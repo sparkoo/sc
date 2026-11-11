@@ -143,6 +143,27 @@ async function run(paths) {
         panes[1].querySelector(".empty")?.textContent === "Empty folder",
       step,
     );
+    step = "right-button drag selection";
+    const mouse = (name, type, buttons) =>
+      row(0, name).dispatchEvent(new MouseEvent(type, {
+        button: 2, buttons, bubbles: true, cancelable: true,
+      }));
+    const marked = (name) => row(0, name).closest(".file-row").classList.contains("marked");
+    mouse("nested", "mousedown", 2);
+    await until(() => marked("nested"), "right-click marks starting row");
+    mouse("beta.txt", "mouseover", 2);
+    await until(() => ["nested", "alpha.txt", "beta.txt"].every(marked), step);
+    mouse("beta.txt", "mouseup", 0);
+    mouse("alpha.txt", "mousedown", 2);
+    mouse("alpha.txt", "mouseup", 0);
+    await until(() => !marked("alpha.txt") && marked("nested") && marked("beta.txt"),
+      "right-click unmarks only its row");
+    mouse("nested", "mousedown", 2);
+    await until(() => !marked("nested"), "right-click unmarks starting row");
+    mouse("beta.txt", "mouseover", 2);
+    await until(() => !["nested", "alpha.txt", "beta.txt"].some(marked),
+      "right drag unmarks rows");
+    mouse("beta.txt", "mouseup", 0);
     step = "hidden entries toggle";
     const hiddenToggle = [...document.querySelectorAll(".commands button")].find(
       (button) => button.textContent.endsWith("Show hidden"),
