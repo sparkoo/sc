@@ -169,7 +169,7 @@ export function Pane({
     else if (event.altKey && key === "ArrowRight") pane.goHistory(1);
     else if (key === "Backspace") pane.up();
     else if (key === "Enter" && item) open(item);
-    else if (key === " " && item) {
+    else if ((key === " " || key === "Insert") && item) {
       toggle(item.id);
       if (rows[index + 1]) pane.setCursor(rows[index + 1].id);
     } else if ((event.ctrlKey || event.metaKey) && key.toLowerCase() === "a")
