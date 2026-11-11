@@ -35,6 +35,7 @@ pub struct Entry {
     pub name: String,
     pub directory: bool,
     pub link: bool,
+    pub hidden: bool,
     pub size: u64,
     pub modified: Option<u64>,
 }

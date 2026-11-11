@@ -143,6 +143,40 @@ async function run(paths) {
         panes[1].querySelector(".empty")?.textContent === "Empty folder",
       step,
     );
+    step = "hidden entries toggle";
+    const hiddenToggle = [...document.querySelectorAll(".commands button")].find(
+      (button) => button.textContent.endsWith("Show hidden"),
+    );
+    const hiddenNames = [".dot-file", ".dot-folder", "native-hidden-file", "native-hidden-folder",
+      ".native-hidden-file", ".native-hidden-folder"];
+    if (!hiddenToggle || hiddenToggle.getAttribute("aria-pressed") !== "false" || hiddenNames.some((name) => row(0, name)))
+      throw new Error("Hidden entries visible by default");
+    const isMac = /Mac/i.test(navigator.platform);
+    const hiddenKey = isMac ? ">" : "h";
+    const hiddenModifiers = isMac
+      ? { code: "Period", metaKey: true, shiftKey: true }
+      : { ctrlKey: true };
+    input(0).focus();
+    if (isMac && !key(input(0), "h", { metaKey: true }))
+      throw new Error("Hidden shortcut intercepted Cmd+H");
+    if (key(input(0), hiddenKey, hiddenModifiers)) throw new Error("Hidden shortcut was not handled");
+    await until(() => row(0, ".dot-file") && row(0, ".dot-folder"), "show dot entries by shortcut");
+    if (document.activeElement !== input(0)) throw new Error("Shortcut stole location focus");
+    key(input(0), hiddenKey, { ...hiddenModifiers, repeat: true });
+    await delay();
+    if (!row(0, ".dot-file")) throw new Error("Repeated key toggled hidden entries");
+    if (!row(0, "native-hidden-file") && !row(0, ".native-hidden-file"))
+      throw new Error("Native hidden file missing");
+    await select(0, ".dot-file");
+    key(list(0), " ");
+    await delay();
+    key(list(0), hiddenKey, hiddenModifiers);
+    await until(() => !hiddenNames.some((name) => row(0, name)), "hide entries by shortcut");
+    hiddenToggle.click();
+    await until(() => row(0, ".dot-file"), "show entries again");
+    if (panes[0].querySelector(".marked")) throw new Error("Invisible mark was retained");
+    hiddenToggle.click();
+    await delay();
     step = "open and leave a subfolder";
     await select(0, "nested");
     key(list(0), "Enter");

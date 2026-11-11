@@ -14,9 +14,13 @@ import {
 } from "./Operations";
 import { Icon } from "./Icons";
 
+const isMac = /Mac/i.test(navigator.platform);
+const hiddenShortcut = isMac ? "Cmd+Shift+." : "Ctrl+H";
+
 export function App() {
-  const left = useBrowser(0),
-    right = useBrowser(1);
+  const [showHidden, setShowHidden] = useState(false);
+  const left = useBrowser(0, showHidden),
+    right = useBrowser(1, showHidden);
   const panes = [left, right];
   const [active, setActive] = useState(0);
   const [placesSide, setPlacesSide] = useState<number | null>(null);
@@ -32,8 +36,19 @@ export function App() {
   }
   useEffect(() => {
     function shortcuts(event: KeyboardEvent) {
+      if (prompt) return;
+      const togglesHidden = isMac
+        ? event.metaKey && event.shiftKey && !event.ctrlKey && event.code === "Period"
+        : event.ctrlKey && !event.shiftKey && !event.metaKey && event.key.toLowerCase() === "h";
+      if (togglesHidden && !event.altKey) {
+        event.preventDefault();
+        if (!event.repeat) {
+          setPlacesSide(null);
+          setShowHidden((previous) => !previous);
+        }
+        return;
+      }
       if (
-        prompt ||
         event.ctrlKey ||
         event.altKey ||
         event.metaKey
@@ -96,6 +111,19 @@ export function App() {
       </div>
       <JobPanel queue={queue} />
       <footer className="commands">
+        <Button
+          size="1"
+          variant={showHidden ? "solid" : "soft"}
+          aria-pressed={showHidden}
+          aria-keyshortcuts={isMac ? "Meta+Shift+." : "Control+h"}
+          title="Show dot files and items with the Windows Hidden attribute in both panes"
+          onClick={() => {
+            setShowHidden((previous) => !previous);
+            focusPane(active);
+          }}
+        >
+          <Kbd>{hiddenShortcut}</Kbd>Show hidden
+        </Button>
         {commands.map((c) => {
           const pane = panes[active];
           const count =
