@@ -379,6 +379,13 @@ export function Pane({
                   if (e.ctrlKey || e.metaKey) toggle(entry.id);
                   else pane.setMarked(new Set());
                 }}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  if (e.button !== 2 || entry.id === parent) return;
+                  focusPane(side);
+                  pane.setCursor(entry.id);
+                  toggle(entry.id);
+                }}
                 onDoubleClick={() => open(entry)}
               >
                 <span className="file-name" title={entry.name}>
