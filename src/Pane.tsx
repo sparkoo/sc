@@ -407,7 +407,6 @@ export function Pane({
                   focusPane(side);
                   pane.setCursor(entry.id);
                   if (e.ctrlKey || e.metaKey) toggle(entry.id);
-                  else pane.setMarked(new Set());
                 }}
                 onContextMenu={(e) => e.preventDefault()}
                 onMouseDown={(e) => {
