@@ -80,7 +80,7 @@ export function Pane({
   });
   const scroll = useRef<HTMLDivElement>(null);
   const search = useRef({ prefix: "", time: 0 });
-  const rightDrag = useRef<{ rows: Entry[]; index: number } | null>(null);
+  const rightDrag = useRef<{ rows: Entry[]; index: number; mark: boolean } | null>(null);
   const parent = pane.folder?.parent;
   const rows = useMemo(() => {
     const entries = [...pane.entries].sort((a, b) =>
@@ -150,10 +150,13 @@ export function Pane({
     const start = Math.min(drag.index, nextIndex);
     const end = Math.max(drag.index, nextIndex);
     drag.index = nextIndex;
+    const { mark } = drag;
     pane.setMarked((previous) => {
       const next = new Set(previous);
       for (const entry of rows.slice(start, end + 1)) {
-        if (entry.id !== parent) next.add(entry.id);
+        if (entry.id === parent) continue;
+        if (mark) next.add(entry.id);
+        else next.delete(entry.id);
       }
       return next;
     });
@@ -411,7 +414,7 @@ export function Pane({
                   if (e.button !== 2) return;
                   e.preventDefault();
                   if (entry.id === parent) return;
-                  rightDrag.current = { rows, index: v.index };
+                  rightDrag.current = { rows, index: v.index, mark: !marked };
                   focusPane(side);
                   pane.setCursor(entry.id);
                   toggle(entry.id);

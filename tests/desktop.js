@@ -158,8 +158,12 @@ async function run(paths) {
     mouse("alpha.txt", "mouseup", 0);
     await until(() => !marked("alpha.txt") && marked("nested") && marked("beta.txt"),
       "right-click unmarks only its row");
-    row(0, "alpha.txt").click();
-    await until(() => !panes[0].querySelector(".file-row.marked"), "clear drag marks");
+    mouse("nested", "mousedown", 2);
+    await until(() => !marked("nested"), "right-click unmarks starting row");
+    mouse("beta.txt", "mouseover", 2);
+    await until(() => !["nested", "alpha.txt", "beta.txt"].some(marked),
+      "right drag unmarks rows");
+    mouse("beta.txt", "mouseup", 0);
     step = "hidden entries toggle";
     const hiddenToggle = [...document.querySelectorAll(".commands button")].find(
       (button) => button.textContent.endsWith("Show hidden"),
