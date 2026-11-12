@@ -27,6 +27,6 @@ Choose **Tester builds** in [GitHub Actions](https://github.com/sparkoo/sc/actio
 
 ## License
 
-Copyright © 2026 Michal Vala.
+Copyright © 2026 sparkoo.
 
 SC is licensed under the [WTFPL version 2](LICENSE).
