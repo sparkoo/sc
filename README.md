@@ -24,3 +24,9 @@ Choose **Tester builds** in [GitHub Actions](https://github.com/sparkoo/sc/actio
 - **Windows x64:** Extract the ZIP and run the setup executable. If SmartScreen prompts, review the publisher details before choosing **More info → Run anyway** for a build you trust.
 - **macOS Apple Silicon:** Open the DMG and drag SC Commander into Applications. For a trusted unsigned build blocked on first launch, use **System Settings → Privacy & Security → Open Anyway**.
 - **Ubuntu 24.04 x64:** Extract the AppImage, make it executable, and open it. If FUSE is unavailable, launch it with `--appimage-extract-and-run`.
+
+## License
+
+Copyright © 2026 Michal Vala.
+
+SC is licensed under the [WTFPL version 2](LICENSE).
