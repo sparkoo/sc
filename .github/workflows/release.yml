@@ -8,7 +8,23 @@ permissions:
   contents: read
 
 jobs:
+  verify-tag:
+    name: Verify tag is on master
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Verify tagged commit is reachable from master
+        run: |
+          git fetch origin master
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/master || {
+            echo "::error::Release tag must point to a commit reachable from master"
+            exit 1
+          }
+
   package:
+    needs: verify-tag
     uses: ./.github/workflows/ci.yml
     with:
       package: true
