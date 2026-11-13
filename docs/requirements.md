@@ -2,7 +2,7 @@
 
 ## First release
 
-Private testers should be able to install SC on Windows 11 x64, Ubuntu 24.04 x64, and macOS on Apple Silicon. Test builds are distributed as downloadable artifacts of a manually triggered GitHub Actions run on the public repository.
+Private testers should be able to install SC on Windows 11 x64, Ubuntu 24.04 x64, and macOS on Apple Silicon. Test builds are distributed as downloadable artifacts of a manually triggered GitHub Actions run on the public repository. Version-tagged release builds are published to GitHub Releases after cross-platform packaging and smoke tests. Public signing and automatic updates remain out of scope.
 
 ### Appearance
 
