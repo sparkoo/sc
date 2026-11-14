@@ -1,6 +1,6 @@
 {
   "productName": "SC Commander",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "identifier": "io.github.sparkoo.sc",
   "build": {
     "beforeDevCommand": "npm run dev",
