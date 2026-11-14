@@ -175,6 +175,7 @@ export function useJobs(onComplete: () => void) {
   const [visible, setVisible] = useState(false);
   const [error, setError] = useState("");
   const [revision, setRevision] = useState(0);
+  const [closeBlocked, setCloseBlocked] = useState(false);
   const finished = useRef(new Set<number>());
   const callback = useRef(onComplete);
   callback.current = onComplete;
@@ -208,8 +209,7 @@ export function useJobs(onComplete: () => void) {
   }, [revision]);
   useEffect(() => {
     const off = listen("queue-needs-attention", () => {
-      setVisible(true);
-      setError("Finish or cancel active jobs before closing.");
+      setCloseBlocked(true);
     });
     return () => {
       void off.then((stop) => stop());
@@ -224,7 +224,100 @@ export function useJobs(onComplete: () => void) {
       setError(String(e));
     }
   }
-  return { jobs, visible, setVisible, error, setError, update, send };
+  return { jobs, visible, setVisible, error, setError, update, send, closeBlocked, setCloseBlocked };
+}
+
+function QueueDialog({
+  title,
+  cancel,
+  children,
+}: {
+  title: string;
+  cancel?: () => void;
+  children: React.ReactNode;
+}) {
+  const dialog = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    const element = dialog.current!;
+    element.showModal();
+    return () => element.close();
+  }, []);
+  return (
+    <dialog
+      ref={dialog}
+      className="dialog"
+      aria-labelledby="queue-dialog-title"
+      onCancel={(event) => {
+        event.preventDefault();
+        cancel?.();
+      }}
+    >
+      <h2 id="queue-dialog-title">{title}</h2>
+      {children}
+    </dialog>
+  );
+}
+
+export function CloseBlockedDialog({ dismiss }: { dismiss: () => void }) {
+  return (
+    <QueueDialog title="File operations are still active" cancel={dismiss}>
+      <p>Wait for the jobs to finish or cancel them in Operations before closing.</p>
+      <div className="dialog-actions">
+        <Button size="1" onClick={dismiss}>OK</Button>
+      </div>
+    </QueueDialog>
+  );
+}
+
+export function ConflictDialog({
+  id,
+  conflict,
+  update,
+}: {
+  id: number;
+  conflict: NonNullable<Job["conflict"]>;
+  update: () => void;
+}) {
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState("");
+  async function resolve(decision?: "skip" | "keepBoth" | "replace") {
+    if (sending) return;
+    setSending(true);
+    setError("");
+    try {
+      if (decision)
+        await invoke("answer_conflict", { id, token: conflict.token, decision });
+      else
+        await invoke("cancel_job", { id });
+      update();
+    } catch (reason) {
+      setError(String(reason));
+      setSending(false);
+      update();
+    }
+  }
+  return (
+    <QueueDialog title="Destination already exists">
+      <label>Destination<output>{conflict.path}</output></label>
+      {error && <p className="error" role="alert">{error}</p>}
+      <div className="dialog-actions conflict-actions">
+        <Button size="1" variant="soft" disabled={sending} onClick={() => void resolve()}>
+          Cancel job
+        </Button>
+        <Button size="1" variant="soft" disabled={sending} onClick={() => void resolve("skip")}>
+          Skip
+        </Button>
+        <Button size="1" variant="soft" disabled={sending} onClick={() => void resolve("keepBoth")}>
+          Keep both
+        </Button>
+        {conflict.replace && (
+          <Button size="1" variant="soft" disabled={sending} onClick={() => void resolve("replace")}>
+            Replace file
+          </Button>
+        )}
+      </div>
+    </QueueDialog>
+  );
 }
 
 export function JobPanel({ queue }: { queue: ReturnType<typeof useJobs> }) {
@@ -284,35 +377,6 @@ export function JobPanel({ queue }: { queue: ReturnType<typeof useJobs> }) {
           </div>
           {job.current && <div className="job-path">{job.current}</div>}
           {job.error && <div className="error">{job.error}</div>}
-          {job.conflict && (
-            <div className="conflict">
-              <span>Already exists · {job.conflict.path}</span>
-              {[
-                "skip",
-                "keepBoth",
-                ...(job.conflict.replace ? ["replace"] : []),
-              ].map((decision) => (
-                <Button
-                  size="1"
-                  variant="soft"
-                  key={decision}
-                  onClick={() =>
-                    void queue.send("answer_conflict", {
-                      id: job.id,
-                      token: job.conflict!.token,
-                      decision,
-                    })
-                  }
-                >
-                  {decision === "keepBoth"
-                    ? "Keep both"
-                    : decision === "skip"
-                      ? "Skip"
-                      : "Replace file"}
-                </Button>
-              ))}
-            </div>
-          )}
           {report?.id === job.id && (
             <pre>{report.lines.join("\n") || "No changes completed."}</pre>
           )}

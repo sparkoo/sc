@@ -59,7 +59,7 @@ async function run(paths) {
   async function command(side, shortcut, name) {
     key(list(side), shortcut);
     await until(
-      () => document.querySelector("dialog[open]"),
+      () => document.querySelector("dialog[open] form"),
       "confirmation for " + shortcut,
     );
     const form = document.querySelector("dialog form");
@@ -74,7 +74,7 @@ async function run(paths) {
     if (name) await setInput(form.querySelector("input"), name);
     form.requestSubmit();
     await until(
-      () => !document.querySelector("dialog"),
+      () => !document.querySelector("dialog form"),
       "dismiss confirmation",
     );
   }
@@ -271,15 +271,25 @@ async function run(paths) {
       throw new Error("Starting a copy opened Operations");
     operations.click();
     await job(1);
+    operations.click();
     step = "keep both";
     await select(0, "alpha.txt");
     await command(0, "F5");
-    await until(() => document.querySelector(".conflict"), "file collision");
-    [...document.querySelectorAll(".conflict button")]
+    await until(
+      () => document.querySelector("dialog[open] .conflict-actions"),
+      "file collision popup",
+    );
+    if (operations.getAttribute("aria-expanded") !== "false")
+      throw new Error("File collision opened Operations");
+    if (!key(document.activeElement, "Tab"))
+      throw new Error("Pane switching intercepted conflict dialog Tab");
+    [...document.querySelectorAll("dialog[open] .conflict-actions button")]
       .find((b) => b.textContent === "Keep both")
       .click();
-    await job(2);
     await until(() => row(1, "alpha (2).txt"), step);
+    await until(() => !document.querySelector("dialog[open]"), "closed conflict popup");
+    operations.click();
+    await job(2);
     step = "rename";
     await select(1, "alpha (2).txt");
     await command(1, "F2", "renamed.txt");

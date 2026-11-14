@@ -4,7 +4,9 @@ import { invoke } from "@tauri-apps/api/core";
 import { useBrowser } from "./browser";
 import { focusPane, Pane } from "./Pane";
 import {
+  CloseBlockedDialog,
   commands,
+  ConflictDialog,
   JobPanel,
   OperationDialog,
   prepare,
@@ -29,6 +31,11 @@ export function App() {
     if (!left.loading) left.refresh();
     if (!right.loading) right.refresh();
   });
+  const conflictedJob = queue.jobs.find((job) => job.conflict);
+  const queueDialogOpen = !prompt && Boolean(conflictedJob || queue.closeBlocked);
+  useEffect(() => {
+    if (queueDialogOpen) setPlacesSide(null);
+  }, [queueDialogOpen]);
   function begin(action: Action, side = active) {
     setActive(side);
     const request = prepare(action, panes[side], panes[1 - side]);
@@ -36,7 +43,7 @@ export function App() {
   }
   useEffect(() => {
     function shortcuts(event: KeyboardEvent) {
-      if (prompt) return;
+      if (prompt || queueDialogOpen) return;
       const togglesHidden = isMac
         ? event.metaKey && event.shiftKey && !event.ctrlKey && event.code === "Period"
         : event.ctrlKey && !event.shiftKey && !event.metaKey && event.key.toLowerCase() === "h";
@@ -181,6 +188,16 @@ export function App() {
           submitted={queue.update}
         />
       )}
+      {!prompt && (conflictedJob?.conflict ? (
+        <ConflictDialog
+          key={`${conflictedJob.id}:${conflictedJob.conflict.token}`}
+          id={conflictedJob.id}
+          conflict={conflictedJob.conflict}
+          update={queue.update}
+        />
+      ) : queue.closeBlocked && (
+        <CloseBlockedDialog dismiss={() => queue.setCloseBlocked(false)} />
+      ))}
     </main>
   );
 }

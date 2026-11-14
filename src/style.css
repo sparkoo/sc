@@ -305,8 +305,7 @@ button:not(.rt-Button):hover:enabled {
   padding: 6px 8px;
 }
 .job-heading,
-.job-summary,
-.conflict {
+.job-summary {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -329,16 +328,14 @@ button:not(.rt-Button):hover:enabled {
   margin-left: auto;
 }
 .job-path,
-.conflict span,
 pre {
   overflow-wrap: anywhere;
 }
 .job-path {
   margin-top: 5px;
 }
-.conflict {
+.conflict-actions {
   flex-wrap: wrap;
-  margin-top: 6px;
 }
 .job pre {
   white-space: pre-wrap;
