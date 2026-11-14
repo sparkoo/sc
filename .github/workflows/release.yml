@@ -48,7 +48,17 @@ jobs:
           GH_REPO: ${{ github.repository }}
           RELEASE_TAG: ${{ github.ref_name }}
         run: |
-          gh release create "$RELEASE_TAG" release/* \
+          shopt -s globstar nullglob
+          installers=()
+          for suffix in _x64-setup.exe _amd64.AppImage _aarch64.dmg; do
+            matches=(release/**/*"$suffix")
+            if [[ ${#matches[@]} -ne 1 || ! -f "${matches[0]}" || ! -s "${matches[0]}" ]]; then
+              echo "::error::Expected exactly one nonempty installer ending in $suffix"
+              exit 1
+            fi
+            installers+=("${matches[0]}")
+          done
+          gh release create "$RELEASE_TAG" "${installers[@]}" \
             --verify-tag \
             --generate-notes \
             --title "$RELEASE_TAG"
