@@ -13,6 +13,15 @@ export const commands = [
   { key: "F8", action: "trash", label: "Trash" },
 ] as const;
 export type Action = (typeof commands)[number]["action"];
+type ConflictEntry = {
+  path: string;
+  size: number | null;
+  modified: number | null;
+};
+const conflictDate = new Intl.DateTimeFormat(undefined, {
+  dateStyle: "medium",
+  timeStyle: "medium",
+});
 type Job = {
   id: number;
   action: Action;
@@ -21,7 +30,12 @@ type Job = {
   bytes: number;
   records: number;
   error: string | null;
-  conflict: { token: number; path: string; replace: boolean } | null;
+  conflict: {
+    token: number;
+    source: ConflictEntry;
+    destination: ConflictEntry;
+    replace: boolean;
+  } | null;
 };
 const complete = (job: Job) =>
   ["finished", "cancelled", "failed"].includes(job.phase);
@@ -318,7 +332,23 @@ export function ConflictDialog({
         if (!event.repeat) shortcut.click();
       }
     }}>
-      <label>Destination<output>{conflict.path}</output></label>
+      <div className="conflict-files">
+        {(["source", "destination"] as const).map((side) => {
+          const entry = conflict[side];
+          return (
+            <section key={side} aria-labelledby={`conflict-${side}`}>
+              <h3 id={`conflict-${side}`}>{side === "source" ? "Source" : "Destination"}</h3>
+              <p className="subject">{entry.path}</p>
+              <dl>
+                <dt>Size</dt>
+                <dd>{entry.size === null ? "Unavailable" : formatBytes(entry.size)}</dd>
+                <dt>Last modified</dt>
+                <dd>{entry.modified === null ? "Unavailable" : conflictDate.format(entry.modified * 1000)}</dd>
+              </dl>
+            </section>
+          );
+        })}
+      </div>
       {error && <p className="error" role="alert">{error}</p>}
       <div className="dialog-actions conflict-actions">
         <Button size="1" variant="soft" data-shortcut="c" aria-keyshortcuts="C" disabled={sending} onClick={() => void resolve()}>

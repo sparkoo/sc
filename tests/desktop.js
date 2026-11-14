@@ -281,6 +281,15 @@ async function run(paths) {
     );
     if (operations.getAttribute("aria-expanded") !== "false")
       throw new Error("File collision opened Operations");
+    const modified = new Intl.DateTimeFormat(undefined, {
+      dateStyle: "medium",
+      timeStyle: "medium",
+    }).format(1600000000000);
+    for (const side of ["source", "destination"]) {
+      const details = document.querySelector(`section[aria-labelledby="conflict-${side}"]`);
+      if (!details?.textContent.includes("5 B") || !details.textContent.includes(modified))
+        throw new Error("Missing conflict metadata for " + side);
+    }
     if (!key(document.activeElement, "Tab"))
       throw new Error("Pane switching intercepted conflict dialog Tab");
     if (document.activeElement.textContent !== "Keep both")

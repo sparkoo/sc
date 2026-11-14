@@ -16,6 +16,7 @@ with tempfile.TemporaryDirectory(prefix="sc-ui-") as folder:
     (root / "source" / "nested").mkdir()
     (root / "source" / "alpha.txt").write_bytes(b"alpha")
     (root / "source" / "beta.txt").write_bytes(b"beta")
+    os.utime(root / "source" / "alpha.txt", (1600000000, 1600000000))
     for name in [".dot-file", ".dot-folder", "native-hidden-file", "native-hidden-folder"]:
         path = root / "source" / name
         if name.endswith("folder"):

@@ -337,6 +337,38 @@ pre {
 .conflict-actions {
   flex-wrap: wrap;
 }
+.dialog:has(.conflict-files) {
+  width: min(680px, 90vw);
+}
+.conflict-files {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
+  gap: 8px;
+}
+.conflict-files section {
+  padding: 10px;
+  border: 1px solid var(--gray-7);
+  background: var(--gray-1);
+}
+.conflict-files h3,
+.conflict-files dl {
+  margin: 0;
+}
+.conflict-files h3 {
+  font-size: 14px;
+}
+.conflict-files dl {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 4px 8px;
+  font-size: 12px;
+}
+.conflict-files dt {
+  color: var(--gray-11);
+}
+.conflict-files dd {
+  margin: 0;
+}
 .job pre {
   white-space: pre-wrap;
   font-size: 11px;

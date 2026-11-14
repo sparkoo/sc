@@ -56,7 +56,7 @@ impl Feedback for Observer {
         }
         Ok(())
     }
-    fn conflict(&self, _: &Path, _: bool) -> io::Result<Decision> {
+    fn conflict(&self, _: ConflictEntry, _: ConflictEntry, _: bool) -> io::Result<Decision> {
         Ok(self.decision)
     }
     fn progress(&self, _: &Path, bytes: u64) {
@@ -74,7 +74,7 @@ fn keeps_a_source_edited_after_destination_publication() {
         fn check(&self) -> io::Result<()> {
             Ok(())
         }
-        fn conflict(&self, _: &Path, _: bool) -> io::Result<Decision> {
+        fn conflict(&self, _: ConflictEntry, _: ConflictEntry, _: bool) -> io::Result<Decision> {
             Ok(Decision::Skip)
         }
         fn progress(&self, _: &Path, _: u64) {}

@@ -1,5 +1,5 @@
 use crate::storage::Storage;
-use crate::transfer::{Action, Decision, Feedback, Request};
+use crate::transfer::{Action, ConflictEntry, Decision, Feedback, Request};
 use serde::Serialize;
 use std::{
     io,
@@ -13,7 +13,8 @@ use tauri::State;
 #[serde(rename_all = "camelCase")]
 pub struct Conflict {
     token: usize,
-    path: String,
+    source: ConflictEntry,
+    destination: ConflictEntry,
     replace: bool,
 }
 
@@ -51,12 +52,18 @@ impl Feedback for Job {
             Ok(())
         }
     }
-    fn conflict(&self, path: &Path, replace: bool) -> io::Result<Decision> {
+    fn conflict(
+        &self,
+        source: ConflictEntry,
+        destination: ConflictEntry,
+        replace: bool,
+    ) -> io::Result<Decision> {
         let mut data = self.data.lock().unwrap();
         data.token += 1;
         data.summary.conflict = Some(Conflict {
             token: data.token,
-            path: path.display().to_string(),
+            source,
+            destination,
             replace,
         });
         data.summary.phase = "conflict";
