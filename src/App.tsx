@@ -178,10 +178,7 @@ export function App() {
             setPrompt(null);
             requestAnimationFrame(() => focusPane(active));
           }}
-          submitted={() => {
-            queue.setVisible(true);
-            queue.update();
-          }}
+          submitted={queue.update}
         />
       )}
     </main>

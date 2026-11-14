@@ -265,8 +265,12 @@ async function run(paths) {
     }
     step = "copy";
     await command(0, "F5");
-    await job(1);
     await until(() => row(1, "alpha.txt"), "copied file");
+    const operations = document.querySelector(".jobs-button");
+    if (operations.getAttribute("aria-expanded") !== "false")
+      throw new Error("Starting a copy opened Operations");
+    operations.click();
+    await job(1);
     step = "keep both";
     await select(0, "alpha.txt");
     await command(0, "F5");

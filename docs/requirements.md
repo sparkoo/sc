@@ -8,7 +8,7 @@ Private testers should be able to install SC on Windows 11 x64, Ubuntu 24.04 x64
 
 Start with a compact Radix Themes dark interface with slate neutrals, an amber accent, and square corners. Use 24-pixel file rows, narrow pane gutters, and compact headers and toolbars to maximize visible files with 12-pixel file names and 11-pixel size and date text. Active panes, keyboard focus, cursor, and marked files remain visually distinct.
 
-The file panes start at the top of the app content, without an app title header. The bottom command bar includes Operations, with its job count and queue visibility toggle.
+The file panes start at the top of the app content, without an app title header. The bottom command bar includes Operations, with its job count and queue visibility toggle. Starting an operation preserves the current visibility of the Operations panel.
 
 ### Local browser
 
