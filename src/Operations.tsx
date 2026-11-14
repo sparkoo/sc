@@ -231,15 +231,18 @@ function QueueDialog({
   title,
   cancel,
   children,
+  onKeyDown,
 }: {
   title: string;
   cancel?: () => void;
   children: React.ReactNode;
+  onKeyDown?: React.KeyboardEventHandler<HTMLDialogElement>;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     const element = dialog.current!;
     element.showModal();
+    element.querySelector<HTMLElement>("[data-default-action]")?.focus();
     return () => element.close();
   }, []);
   return (
@@ -247,6 +250,7 @@ function QueueDialog({
       ref={dialog}
       className="dialog"
       aria-labelledby="queue-dialog-title"
+      onKeyDown={onKeyDown}
       onCancel={(event) => {
         event.preventDefault();
         cancel?.();
@@ -297,22 +301,38 @@ export function ConflictDialog({
     }
   }
   return (
-    <QueueDialog title="Destination already exists">
+    <QueueDialog title="Destination already exists" onKeyDown={(event) => {
+      if (sending || event.altKey || event.ctrlKey || event.metaKey) return;
+      const buttons = [...event.currentTarget.querySelectorAll<HTMLButtonElement>("button[data-shortcut]")];
+      const direction = ["ArrowLeft", "ArrowUp"].includes(event.key) ? -1
+        : ["ArrowRight", "ArrowDown"].includes(event.key) ? 1 : 0;
+      if (direction) {
+        event.preventDefault();
+        const current = buttons.findIndex((button) => button === document.activeElement);
+        buttons[(current + direction + buttons.length) % buttons.length]?.focus();
+        return;
+      }
+      const shortcut = buttons.find((button) => button.dataset.shortcut === event.key.toLowerCase());
+      if (shortcut) {
+        event.preventDefault();
+        if (!event.repeat) shortcut.click();
+      }
+    }}>
       <label>Destination<output>{conflict.path}</output></label>
       {error && <p className="error" role="alert">{error}</p>}
       <div className="dialog-actions conflict-actions">
-        <Button size="1" variant="soft" disabled={sending} onClick={() => void resolve()}>
-          Cancel job
+        <Button size="1" variant="soft" data-shortcut="c" aria-keyshortcuts="C" disabled={sending} onClick={() => void resolve()}>
+          <span><u>C</u>ancel job</span>
         </Button>
-        <Button size="1" variant="soft" disabled={sending} onClick={() => void resolve("skip")}>
-          Skip
+        <Button size="1" variant="soft" data-shortcut="s" aria-keyshortcuts="S" disabled={sending} onClick={() => void resolve("skip")}>
+          <span><u>S</u>kip</span>
         </Button>
-        <Button size="1" variant="soft" disabled={sending} onClick={() => void resolve("keepBoth")}>
-          Keep both
+        <Button size="1" data-default-action="" data-shortcut="k" aria-keyshortcuts="K" disabled={sending} onClick={() => void resolve("keepBoth")}>
+          <span><u>K</u>eep both</span>
         </Button>
         {conflict.replace && (
-          <Button size="1" variant="soft" disabled={sending} onClick={() => void resolve("replace")}>
-            Replace file
+          <Button size="1" variant="soft" data-shortcut="r" aria-keyshortcuts="R" disabled={sending} onClick={() => void resolve("replace")}>
+            <span><u>R</u>eplace file</span>
           </Button>
         )}
       </div>

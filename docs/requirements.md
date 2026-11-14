@@ -24,7 +24,7 @@ F2 renames, F5 copies to the opposite pane, F6 moves there, F7 creates a folder,
 
 Offer Skip, Keep both, and Replace for file collisions. Merge matching directories. Publish completed copies before removing their sources on cross-volume moves. Clean up interrupted work, preserve links where supported, and reject recursive self-copies.
 
-The operations panel shows the current file, transferred bytes, cancellation, and a detailed list of finished or skipped entries. File conflicts open a modal dialog with the destination and the available choices, including cancelling the job. Keep both chooses a numbered sibling. Replace is available for distinct regular files. Trying to close the window with active jobs also opens a modal notice. Both dialogs preserve the visibility of the operations panel. Jobs stop on the first error. An in-progress directory transfer can leave completed children in the destination.
+The operations panel shows the current file, transferred bytes, cancellation, and a detailed list of finished or skipped entries. File conflicts open a modal dialog with the destination and the available choices, including cancelling the job. Keep both initially has focus. Arrow keys move between actions, and Enter activates the focused action. The underlined letters C, S, K, and R activate Cancel job, Skip, Keep both, and Replace file when available. Keep both chooses a numbered sibling. Replace is available for distinct regular files. Trying to close the window with active jobs also opens a modal notice. Both dialogs preserve the visibility of the operations panel. Jobs stop on the first error. An in-progress directory transfer can leave completed children in the destination.
 
 ### Acceptance
 

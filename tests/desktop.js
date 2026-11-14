@@ -283,9 +283,15 @@ async function run(paths) {
       throw new Error("File collision opened Operations");
     if (!key(document.activeElement, "Tab"))
       throw new Error("Pane switching intercepted conflict dialog Tab");
-    [...document.querySelectorAll("dialog[open] .conflict-actions button")]
-      .find((b) => b.textContent === "Keep both")
-      .click();
+    if (document.activeElement.textContent !== "Keep both")
+      throw new Error("Keep both was not focused");
+    key(document.activeElement, "ArrowLeft");
+    if (document.activeElement.textContent !== "Skip")
+      throw new Error("ArrowLeft did not focus Skip");
+    key(document.activeElement, "ArrowRight");
+    if (document.activeElement.textContent !== "Keep both")
+      throw new Error("ArrowRight did not focus Keep both");
+    key(document.activeElement, "k");
     await until(() => row(1, "alpha (2).txt"), step);
     await until(() => !document.querySelector("dialog[open]"), "closed conflict popup");
     operations.click();
