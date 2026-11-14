@@ -73,6 +73,7 @@ export function OperationDialog({
   submitted(): void;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
+  const confirm = useRef<HTMLButtonElement>(null);
   const [name, setName] = useState(
     prompt.action === "rename" ? prompt.names[0] : "",
   );
@@ -80,10 +81,12 @@ export function OperationDialog({
   const [sending, setSending] = useState(false);
   const title = commands.find((c) => c.action === prompt.action)!.label;
   const editName = prompt.action === "rename" || prompt.action === "newFolder";
+  const transfer = prompt.action === "copy" || prompt.action === "move";
   useEffect(() => {
     dialog.current?.showModal();
+    if (transfer) confirm.current?.focus();
     dialog.current?.querySelector("input")?.select();
-  }, []);
+  }, [transfer]);
   async function submit() {
     if (sending) return;
     setSending(true);
@@ -157,7 +160,8 @@ export function OperationDialog({
             size="1"
             variant="solid"
             type="submit"
-            autoFocus={!editName}
+            ref={confirm}
+            autoFocus={!editName && !transfer}
             disabled={sending}
           >
             {title}

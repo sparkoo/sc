@@ -20,7 +20,7 @@ Files and folders whose names start with a dot or have the Windows Hidden attrib
 
 ### Local operations
 
-F2 renames, F5 copies to the opposite pane, F6 moves there, F7 creates a folder, and F8 sends items to the OS trash. Show the target before transferring. When trash is unavailable, leave the item in place. A single background queue reports progress, conflicts, cancellations, and partial results.
+F2 renames, F5 copies to the opposite pane, F6 moves there, F7 creates a folder, and F8 sends items to the OS trash. Show the target before transferring. When the copy or move dialog opens, focus the confirmation button so Enter starts the transfer. Escape dismisses the dialog. When trash is unavailable, leave the item in place. A single background queue reports progress, conflicts, cancellations, and partial results.
 
 Offer Skip, Keep both, and Replace for file collisions. Merge matching directories. Publish completed copies before removing their sources on cross-volume moves. Clean up interrupted work, preserve links where supported, and reject recursive self-copies.
 
