@@ -81,12 +81,11 @@ export function OperationDialog({
   const [sending, setSending] = useState(false);
   const title = commands.find((c) => c.action === prompt.action)!.label;
   const editName = prompt.action === "rename" || prompt.action === "newFolder";
-  const transfer = prompt.action === "copy" || prompt.action === "move";
   useEffect(() => {
     dialog.current?.showModal();
-    if (transfer) confirm.current?.focus();
+    if (!editName) confirm.current?.focus();
     dialog.current?.querySelector("input")?.select();
-  }, [transfer]);
+  }, [editName]);
   async function submit() {
     if (sending) return;
     setSending(true);
@@ -161,7 +160,6 @@ export function OperationDialog({
             variant="solid"
             type="submit"
             ref={confirm}
-            autoFocus={!editName && !transfer}
             disabled={sending}
           >
             {title}

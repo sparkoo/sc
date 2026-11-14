@@ -63,9 +63,9 @@ async function run(paths) {
       "confirmation for " + shortcut,
     );
     const form = document.querySelector("dialog form");
-    if (shortcut === "F5" || shortcut === "F6") {
+    if (!name) {
       if (document.activeElement !== form.querySelector('button[type="submit"]'))
-        throw new Error("Transfer confirmation is not focused for " + shortcut);
+        throw new Error("Confirmation is not focused for " + shortcut);
     }
     const control = form.querySelector("input, button");
     control.focus();
