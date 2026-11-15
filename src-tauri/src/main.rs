@@ -7,6 +7,7 @@ mod storage;
 mod transfer;
 #[cfg(feature = "ui-test")]
 mod ui_test;
+mod updates;
 
 use std::sync::atomic::{AtomicU64, Ordering};
 use tauri::{ipc::Channel, Emitter, Manager};
@@ -74,12 +75,23 @@ fn frontend_ready(window: tauri::WebviewWindow, report: Option<serde_json::Value
 fn main() {
     let provider: storage::Storage = std::sync::Arc::new(local::LocalStorage);
     tauri::Builder::default()
+        .setup(|app| {
+            if app.config().plugins.0.contains_key("updater") {
+                app.handle()
+                    .plugin(tauri_plugin_updater::Builder::new().build())?;
+            }
+            Ok(())
+        })
         .manage(provider.clone())
         .manage(Browsers::default())
         .manage(jobs::Queue::new(provider))
+        .manage(updates::PendingUpdate::default())
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
-                if window.state::<jobs::Queue>().busy() {
+                let queue = window.state::<jobs::Queue>();
+                if queue.installing_update() {
+                    api.prevent_close();
+                } else if queue.busy() {
                     api.prevent_close();
                     let _ = window.emit("queue-needs-attention", ());
                 }
@@ -91,6 +103,8 @@ fn main() {
             quick_places,
             quick_place_label,
             open_file,
+            updates::check_update,
+            updates::install_update,
             jobs::start_job,
             jobs::job_list,
             jobs::job_report,
