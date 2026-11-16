@@ -165,6 +165,44 @@ async function run(paths) {
         panes[1].querySelector(".empty")?.textContent === "Empty folder",
       step,
     );
+    step = "quick search";
+    const query = (side) => panes[side].querySelector(".quick-search-query")?.textContent;
+    list(0).focus();
+    key(list(0), "P", { shiftKey: true });
+    await until(() => query(0) === "P" && row(0, "alpha.txt") && !row(0, "beta.txt"),
+      "case-insensitive substring filter");
+    await delay(900);
+    key(list(0), "h");
+    await until(() => query(0) === "Ph" && row(0, "alpha.txt") && !row(0, "..") &&
+      panes[0].querySelector(".cursor .file-name")?.textContent === "alpha.txt",
+      "persistent query and matching cursor");
+    key(list(0), "Tab");
+    await until(() => document.activeElement === list(1) && !query(1) && row(1, ".."),
+      "independent pane filters");
+    key(list(1), "Tab");
+    key(list(0), "z");
+    await until(() => panes[0].querySelector(".empty")?.textContent === "No matching items" &&
+      !list(0).hasAttribute("aria-activedescendant"), "no matches");
+    key(list(0), "Backspace");
+    await until(() => query(0) === "Ph" && row(0, "alpha.txt"), "edit the query");
+    for (const expected of ["P", "Quick Search"]) {
+      key(list(0), "Backspace");
+      await until(() => query(0) === expected, "erase the query");
+    }
+    await until(() => row(0, "beta.txt") && row(0, ".."), "restore the full list");
+    key(list(0), "Backspace", { repeat: true });
+    key(list(0), "Backspace");
+    await delay();
+    if (input(0).value !== paths.source || !done(0) || query(0) !== "Quick Search")
+      throw new Error("Backspace navigated with an empty Quick Search query");
+    key(list(0), "Escape");
+    await until(() => !query(0), "exit Quick Search");
+    key(list(0), "Backspace");
+    await until(() => done(0) && input(0).value !== paths.source && row(0, "source"),
+      "Backspace navigates after exiting Quick Search");
+    await navigate(0, paths.source);
+    await until(() => done(0) && row(0, "alpha.txt"), "return to source");
+
     step = "right-button drag selection";
     const mouse = (name, type, buttons) =>
       row(0, name).dispatchEvent(new MouseEvent(type, {

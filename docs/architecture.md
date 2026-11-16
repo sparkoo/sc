@@ -27,7 +27,7 @@ The `quick_places` command runs native location discovery in a Rust worker and r
 
 The pane requests a listing with a monotonically increasing generation. Rust enumerates in a worker, encoding native path bytes as opaque IDs so a display name never identifies an operation target. A Tauri channel sends the resolved folder, batches of up to 256 entries, then a completion count of unreadable entries. A new request supersedes earlier generations for that pane. React coalesces incoming updates, sorts directory-first, and virtualizes the rows. The frontend prepends a synthetic `..` row using the parent ID supplied by Rust and routes it through the existing parent-navigation action. It stays outside the real entry collection used for operations, marking, and counts. Each pane owns its history, cursor and marks. Only the last location of each pane persists.
 
-Rust includes a `hidden` flag on each entry based on its native dot name or Windows Hidden attribute. The frontend retains the complete listing and filters visible entries using a session-wide Show hidden toggle, without re-reading the filesystem. Pane marks and cursor are cleared when their entries become invisible.
+Rust includes a `hidden` flag on each entry based on its native dot name or Windows Hidden attribute. The frontend retains the complete listing and filters visible entries using a session-wide Show hidden toggle, without re-reading the filesystem. Turning off Show hidden clears marks and cursor on hidden entries. Each pane applies its Quick Search name filter to the visible listing in the browser hook, so rendering and file operations use the same matching entries. The pane component handles query keystrokes and displays the query in its header.
 
 ## Copying between panes
 
