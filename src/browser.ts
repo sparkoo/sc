@@ -38,18 +38,28 @@ export function useBrowser(pane: number, showHidden = false) {
   const [allEntries, setEntries] = useState<Entry[]>([]);
   const [marked, setMarked] = useState<Set<string>>(new Set());
   const [cursor, setCursor] = useState("");
+  const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [history, setHistory] = useState({ items: [] as Folder[], index: -1 });
-  const entries = useMemo(
+  const unhiddenEntries = useMemo(
     () => showHidden ? allEntries : allEntries.filter((entry) => !entry.hidden),
     [allEntries, showHidden],
   );
   // Exclude invisible marks immediately, including before the cleanup effect runs.
-  const visibleIds = useMemo(() => new Set(entries.map((entry) => entry.id)), [entries]);
+  const visibleIds = useMemo(() => new Set(unhiddenEntries.map((entry) => entry.id)), [unhiddenEntries]);
+  const entries = useMemo(() => {
+    if (!query) return unhiddenEntries;
+    const needle = query.toLocaleLowerCase();
+    return unhiddenEntries.filter((entry) => entry.name.toLocaleLowerCase().includes(needle));
+  }, [query, unhiddenEntries]);
+  const matchingIds = useMemo(
+    () => query ? new Set(entries.map((entry) => entry.id)) : visibleIds,
+    [entries, query, visibleIds],
+  );
   const visibleMarks = useMemo(
-    () => new Set([...marked].filter((id) => visibleIds.has(id))),
-    [marked, visibleIds],
+    () => new Set([...marked].filter((id) => matchingIds.has(id))),
+    [marked, matchingIds],
   );
   useEffect(() => {
     setMarked((previous) => {
@@ -89,6 +99,7 @@ export function useBrowser(pane: number, showHidden = false) {
         switch (message.type) {
           case "opened": {
             const next = message.data;
+            if (!options.refresh) setQuery("");
             setFolder(next);
             setEntries([]);
             setMarked(new Set());
@@ -152,15 +163,17 @@ export function useBrowser(pane: number, showHidden = false) {
     if (folder?.parent) navigate({ id: folder.parent }, { focus: folder.id });
   }
   function refresh(focus = cursor) {
-    if (folder) navigate({ id: folder.id }, { focus });
+    if (folder) navigate({ id: folder.id }, { focus, refresh: true });
   }
   return {
     folder,
     entries,
     marked: visibleMarks,
     setMarked,
-    cursor,
+    cursor: query && !matchingIds.has(cursor) ? "" : cursor,
     setCursor,
+    query,
+    setQuery,
     loading,
     error,
     setError,

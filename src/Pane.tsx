@@ -79,9 +79,8 @@ export function Pane({
     reverse: false,
   });
   const scroll = useRef<HTMLDivElement>(null);
-  const search = useRef({ prefix: "", time: 0 });
   const rightDrag = useRef<{ rows: Entry[]; index: number; mark: boolean } | null>(null);
-  const parent = pane.folder?.parent;
+  const parent = pane.query ? null : pane.folder?.parent;
   const rows = useMemo(() => {
     const entries = [...pane.entries].sort((a, b) =>
       compare(a, b, sort.column, sort.reverse),
@@ -121,7 +120,7 @@ export function Pane({
   }, [pane.loading, index, rows, pane.setCursor]);
   useEffect(() => {
     if (index >= 0) virtual.scrollToIndex(index, { align: "auto" });
-  }, [index, virtual]);
+  }, [index, pane.query, virtual]);
 
   function open(entry: Entry) {
     if (entry.id === parent) pane.up();
@@ -167,13 +166,17 @@ export function Pane({
     const key = event.key;
     if (event.altKey && key === "ArrowLeft") pane.goHistory(-1);
     else if (event.altKey && key === "ArrowRight") pane.goHistory(1);
-    else if (key === "Backspace") pane.up();
+    else if (key === "Escape" && pane.query) pane.setQuery("");
+    else if (key === "Backspace") {
+      if (pane.query) pane.setQuery([...pane.query].slice(0, -1).join(""));
+      else pane.up();
+    }
     else if (key === "Enter" && item) open(item);
-    else if ((key === " " || key === "Insert") && item) {
+    else if ((key === "Insert" || (key === " " && !pane.query)) && item) {
       toggle(item.id);
       if (rows[index + 1]) pane.setCursor(rows[index + 1].id);
     } else if ((event.ctrlKey || event.metaKey) && key.toLowerCase() === "a")
-      pane.setMarked(new Set(pane.entries.map((e) => e.id)));
+      pane.setMarked((previous) => new Set([...previous, ...pane.entries.map((e) => e.id)]));
     else if (
       ["ArrowDown", "ArrowUp", "Home", "End", "PageDown", "PageUp"].includes(
         key,
@@ -196,20 +199,13 @@ export function Pane({
         rows[Math.max(0, Math.min(rows.length - 1, index + offsets[key]))].id,
       );
     } else if (
-      key.length === 1 &&
+      [...key].length === 1 &&
+      (key !== " " || pane.query) &&
       !event.ctrlKey &&
       !event.metaKey &&
       !event.altKey
     ) {
-      const now = Date.now();
-      const prefix =
-        (now - search.current.time < 850 ? search.current.prefix : "") +
-        key.toLocaleLowerCase();
-      search.current = { prefix, time: now };
-      const match = rows.find((e) =>
-        e.name.toLocaleLowerCase().startsWith(prefix),
-      );
-      if (match) pane.setCursor(match.id);
+      pane.setQuery((previous) => previous + key);
     } else return;
     event.preventDefault();
   }
@@ -252,6 +248,11 @@ export function Pane({
             <Icon name="up" />
           </button>
         </div>
+        {pane.query && (
+          <output className="quick-search-query" aria-label="Quick Search" title={pane.query}>
+            {pane.query}
+          </output>
+        )}
       </div>
       <form
         className="location"
@@ -372,7 +373,9 @@ export function Pane({
               ? "Reading folder…"
               : pane.error
                 ? "Folder unavailable"
-                : "Empty folder"}
+                : pane.query
+                  ? "No matching items"
+                  : "Empty folder"}
           </div>
         )}
         <div

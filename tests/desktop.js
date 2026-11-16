@@ -165,6 +165,29 @@ async function run(paths) {
         panes[1].querySelector(".empty")?.textContent === "Empty folder",
       step,
     );
+    step = "quick search";
+    const query = (side) => panes[side].querySelector(".quick-search-query")?.textContent;
+    list(0).focus();
+    key(list(0), "P", { shiftKey: true });
+    await until(() => query(0) === "P" && row(0, "alpha.txt") && !row(0, "beta.txt"),
+      "case-insensitive substring filter");
+    await delay(900);
+    key(list(0), "h");
+    await until(() => query(0) === "Ph" && row(0, "alpha.txt") && !row(0, "..") &&
+      panes[0].querySelector(".cursor .file-name")?.textContent === "alpha.txt",
+      "persistent query and matching cursor");
+    key(list(0), "Tab");
+    await until(() => document.activeElement === list(1) && !query(1) && row(1, ".."),
+      "independent pane filters");
+    key(list(1), "Tab");
+    key(list(0), "z");
+    await until(() => panes[0].querySelector(".empty")?.textContent === "No matching items" &&
+      !list(0).hasAttribute("aria-activedescendant"), "no matches");
+    key(list(0), "Backspace");
+    await until(() => query(0) === "Ph" && row(0, "alpha.txt"), "edit the query");
+    key(list(0), "Escape");
+    await until(() => !query(0) && row(0, "beta.txt") && row(0, ".."), "clear the filter");
+
     step = "right-button drag selection";
     const mouse = (name, type, buttons) =>
       row(0, name).dispatchEvent(new MouseEvent(type, {

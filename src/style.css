@@ -84,6 +84,16 @@ h2 {
   display: flex;
   gap: 3px;
 }
+.quick-search-query {
+  min-width: 0;
+  max-width: 50%;
+  padding: 2px 5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: pre;
+  color: var(--accent-12);
+  background: var(--accent-4);
+}
 .nav button,
 .location button {
   width: 26px;
