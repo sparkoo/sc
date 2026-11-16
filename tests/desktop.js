@@ -86,6 +86,28 @@ async function run(paths) {
   }
   let result;
   try {
+    step = "update settings";
+    const settingsButton = [...document.querySelectorAll(".commands button")]
+      .find((button) => button.textContent === "Settings");
+    const settingsCheckbox = () => document.querySelector('dialog[open] [role="checkbox"]');
+    const closeSettings = () => [...document.querySelectorAll("dialog button")]
+      .find((button) => button.textContent === "Close").click();
+    settingsButton.click();
+    await until(settingsCheckbox, "open update settings");
+    const originalPreference = settingsCheckbox().getAttribute("aria-checked");
+    settingsCheckbox().click();
+    await until(() => settingsCheckbox().getAttribute("aria-checked") !== originalPreference, "toggle update preference");
+    closeSettings();
+    await until(() => !settingsCheckbox(), "close update settings");
+    settingsButton.click();
+    await until(settingsCheckbox, "reopen update settings");
+    if (settingsCheckbox().getAttribute("aria-checked") === originalPreference)
+      throw new Error("The update preference did not survive closing Settings");
+    settingsCheckbox().click();
+    await until(() => settingsCheckbox().getAttribute("aria-checked") === originalPreference, "restore update preference");
+    closeSettings();
+    await until(() => !settingsCheckbox(), "dismiss update settings");
+
     step = "quick select native places";
     const places = await window.__TAURI_INTERNALS__.invoke("quick_places");
     const home = places.find((place) => place.name === "Home");

@@ -222,7 +222,7 @@ export function useJobs(onComplete: () => void) {
       setError(String(e));
     }
   }
-  return { jobs, visible, setVisible, error, setError, update, send };
+  return { jobs, busy: jobs.some((job) => !complete(job)), visible, setVisible, error, setError, update, send };
 }
 
 export function JobPanel({ queue }: { queue: ReturnType<typeof useJobs> }) {

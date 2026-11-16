@@ -8,6 +8,14 @@ on:
       package:
         type: boolean
         default: false
+      signed-updates:
+        type: boolean
+        default: false
+    secrets:
+      TAURI_SIGNING_PRIVATE_KEY:
+        required: false
+      TAURI_SIGNING_PRIVATE_KEY_PASSWORD:
+        required: false
 permissions:
   contents: read
 jobs:
@@ -51,8 +59,26 @@ jobs:
         if: ${{ !inputs.package }}
         run: python tests/desktop.py
       - name: Package desktop application
-        if: inputs.package
+        if: inputs.package && !inputs.signed-updates
         run: npm run tauri -- build --ci --bundles ${{ matrix.bundle }} -- --locked
+      - name: Configure signed updates
+        if: inputs.signed-updates
+        env:
+          TAURI_UPDATER_PUBLIC_KEY: ${{ vars.TAURI_UPDATER_PUBLIC_KEY }}
+        run: python .github/scripts/release.py config updater.release.json
+      - name: Package desktop application with signed updates
+        if: inputs.signed-updates
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          BUNDLES: ${{ runner.os == 'macOS' && 'app,dmg' || matrix.bundle }}
+        shell: bash
+        run: |
+          if [[ -z "$TAURI_SIGNING_PRIVATE_KEY" ]]; then
+            echo "::error::Set the TAURI_SIGNING_PRIVATE_KEY repository secret before tagging a release"
+            exit 1
+          fi
+          npm run tauri -- build --ci --bundles "$BUNDLES" --config updater.release.json -- --locked
       - name: Measure large-directory streaming
         if: inputs.package
         run: cargo test --manifest-path src-tauri/Cargo.toml --locked large_directory_streams -- --ignored --nocapture
@@ -67,5 +93,16 @@ jobs:
             src-tauri/target/release/bundle/nsis/*-setup.exe
             src-tauri/target/release/bundle/appimage/*.AppImage
             src-tauri/target/release/bundle/dmg/*.dmg
+          if-no-files-found: error
+          retention-days: 30
+      - uses: actions/upload-artifact@v4
+        if: inputs.signed-updates
+        with:
+          name: updates-${{ matrix.name }}-${{ github.sha }}
+          path: |
+            src-tauri/target/release/bundle/nsis/*-setup.exe.sig
+            src-tauri/target/release/bundle/appimage/*.AppImage.sig
+            src-tauri/target/release/bundle/macos/*.app.tar.gz
+            src-tauri/target/release/bundle/macos/*.app.tar.gz.sig
           if-no-files-found: error
           retention-days: 30

@@ -363,3 +363,11 @@ pre {
   color: var(--gray-11);
   font-size: 11px;
 }
+.dialog .update-preference {
+  display: flex;
+  align-items: center;
+}
+.update-status {
+  color: var(--gray-11);
+  margin: 4px 8px;
+}

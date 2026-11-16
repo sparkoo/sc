@@ -2,7 +2,7 @@
 
 ## First release
 
-Private testers should be able to install SC on Windows 11 x64, Ubuntu 24.04 x64, and macOS on Apple Silicon. Test builds are distributed as downloadable artifacts of a manually triggered GitHub Actions run on the public repository. Version-tagged release builds are published to GitHub Releases after cross-platform packaging and smoke tests. Public signing and automatic updates remain out of scope.
+Private testers should be able to install SC on Windows 11 x64, Ubuntu 24.04 x64, and macOS on Apple Silicon. Test builds are distributed as downloadable artifacts of a manually triggered GitHub Actions run on the public repository. Version-tagged release builds are published to GitHub Releases after cross-platform packaging and smoke tests.
 
 ### Appearance
 
@@ -32,6 +32,10 @@ The operations panel shows the current file, transferred bytes, conflicts, cance
 - Complete a keyboard-only copy, conflict resolution, rename, and trash cycle. Verify contents and focus after each step.
 - On a full destination, denied access, or cancelled cross-drive move, identify completed and unfinished work. Verify unfinished sources remain intact.
 
+## Application updates
+
+Installed release builds check for newer stable versions at launch. When an update is available, offer Install update and Later. Later defers the update for the current session. The prompt and Settings → Updates share a saved Automatically install future updates checkbox, off by default. When enabled, announce the update before installation starts and allow the user to defer it or turn off automatic installation. Wait for file operations to finish before installing, and restart after a successful installation. Installation errors leave the application open and allow a retry.
+
 ## Later milestones
 
-Add thumbnail and image previews, SFTP over SSH, then FTP/FTPS. Per-pane tabs, recursive search, public signing, and updates are outside the first release.
+Add thumbnail and image previews, SFTP over SSH, then FTP/FTPS. Per-pane tabs, recursive search, and platform code signing are later milestones.

@@ -22,6 +22,7 @@ renamore = "0.3"
 same-file = "1"
 trash = "5"
 tempfile = "3"
+tauri-plugin-updater = { version = "2", default-features = false, features = ["rustls-tls", "zip"] }
 
 [target.'cfg(unix)'.dependencies]
 xattr = "1"

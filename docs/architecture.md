@@ -39,6 +39,14 @@ Moves first try an exclusive OS rename. A cross-volume move falls back to a stag
 
 Regular-file copies use the Windows native copy API to retain alternate data streams and report cancellation. On Unix the staged file receives the source's extended attributes, modification time, and permissions. A metadata-copy error aborts before publishing the staged file. The source's identity, size, and modification time are checked before publication and again before removal on a move. A detected external edit preserves the source and reports an error.
 
+## Application updates
+
+Tagged GitHub Releases publish a manifest and signed Tauri update artifacts for the Windows installer, Linux AppImage, and macOS app bundle. Release builds embed the updater public key and the GitHub Releases manifest URL. The Rust updater checks versions, verifies the downloaded payload, and coordinates installation and restart with the file-operation queue. The frontend owns the update prompt, restart notice, and preference stored in local storage. Development and CI test builds have no updater endpoint.
+
+Generate the release key pair with the Tauri CLI using `npm run tauri -- signer generate --write-keys <key-path>`, with a key path outside the checkout. Set the GitHub repository variable `TAURI_UPDATER_PUBLIC_KEY` to the contents of the generated public key. Store the private key as the repository secret `TAURI_SIGNING_PRIVATE_KEY` and its password, if set, as `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`. Keep a secure backup of the key pair. Installed clients trust the public key embedded in their release. Tag the release with `v` followed by the version in `src-tauri/tauri.conf.json`.
+
+Test upgrades from an updater-enabled release to a newer signed release on Windows x64, Ubuntu x64 running the AppImage, and macOS Apple Silicon. Verify that the preference survives restart, active transfers delay an update, and changing the preference in Settings restores the confirmation prompt. Existing installs need to install the first updater-enabled release manually.
+
 ## Provider interface
 
 The internal `StorageProvider` interface owns directory streaming, external opening, and execution of typed file requests. The Tauri commands and queue share a single local provider. Each listed folder advertises its supported actions, which determines the available pane commands. Local staging, permissions, and rename semantics stay inside the provider implementation. When SFTP arrives, add provider routing and stream-based transfers between providers. A future preview provider will consume content through storage. The public plugin API follows those two concrete implementations.
