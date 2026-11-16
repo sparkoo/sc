@@ -80,6 +80,7 @@ export function Pane({
   });
   const scroll = useRef<HTMLDivElement>(null);
   const rightDrag = useRef<{ rows: Entry[]; index: number; mark: boolean } | null>(null);
+  const searching = pane.query !== null;
   const parent = pane.query ? null : pane.folder?.parent;
   const rows = useMemo(() => {
     const entries = [...pane.entries].sort((a, b) =>
@@ -166,13 +167,12 @@ export function Pane({
     const key = event.key;
     if (event.altKey && key === "ArrowLeft") pane.goHistory(-1);
     else if (event.altKey && key === "ArrowRight") pane.goHistory(1);
-    else if (key === "Escape" && pane.query) pane.setQuery("");
+    else if (key === "Escape" && searching) pane.setQuery(null);
     else if (key === "Backspace") {
-      if (pane.query) pane.setQuery([...pane.query].slice(0, -1).join(""));
+      if (searching) pane.setQuery((previous) => [...(previous ?? "")].slice(0, -1).join(""));
       else pane.up();
-    }
-    else if (key === "Enter" && item) open(item);
-    else if ((key === "Insert" || (key === " " && !pane.query)) && item) {
+    } else if (key === "Enter" && item) open(item);
+    else if ((key === "Insert" || (key === " " && !searching)) && item) {
       toggle(item.id);
       if (rows[index + 1]) pane.setCursor(rows[index + 1].id);
     } else if ((event.ctrlKey || event.metaKey) && key.toLowerCase() === "a")
@@ -200,12 +200,12 @@ export function Pane({
       );
     } else if (
       [...key].length === 1 &&
-      (key !== " " || pane.query) &&
+      (key !== " " || searching) &&
       !event.ctrlKey &&
       !event.metaKey &&
       !event.altKey
     ) {
-      pane.setQuery((previous) => previous + key);
+      pane.setQuery((previous) => (previous ?? "") + key);
     } else return;
     event.preventDefault();
   }
@@ -248,9 +248,9 @@ export function Pane({
             <Icon name="up" />
           </button>
         </div>
-        {pane.query && (
-          <output className="quick-search-query" aria-label="Quick Search" title={pane.query}>
-            {pane.query}
+        {searching && (
+          <output className="quick-search-query" aria-label="Quick Search" title={pane.query || undefined}>
+            {pane.query || "Quick Search"}
           </output>
         )}
       </div>

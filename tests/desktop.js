@@ -185,8 +185,23 @@ async function run(paths) {
       !list(0).hasAttribute("aria-activedescendant"), "no matches");
     key(list(0), "Backspace");
     await until(() => query(0) === "Ph" && row(0, "alpha.txt"), "edit the query");
+    for (const expected of ["P", "Quick Search"]) {
+      key(list(0), "Backspace");
+      await until(() => query(0) === expected, "erase the query");
+    }
+    await until(() => row(0, "beta.txt") && row(0, ".."), "restore the full list");
+    key(list(0), "Backspace", { repeat: true });
+    key(list(0), "Backspace");
+    await delay();
+    if (input(0).value !== paths.source || !done(0) || query(0) !== "Quick Search")
+      throw new Error("Backspace navigated with an empty Quick Search query");
     key(list(0), "Escape");
-    await until(() => !query(0) && row(0, "beta.txt") && row(0, ".."), "clear the filter");
+    await until(() => !query(0), "exit Quick Search");
+    key(list(0), "Backspace");
+    await until(() => done(0) && input(0).value !== paths.source && row(0, "source"),
+      "Backspace navigates after exiting Quick Search");
+    await navigate(0, paths.source);
+    await until(() => done(0) && row(0, "alpha.txt"), "return to source");
 
     step = "right-button drag selection";
     const mouse = (name, type, buttons) =>

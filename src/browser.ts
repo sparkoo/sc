@@ -38,7 +38,7 @@ export function useBrowser(pane: number, showHidden = false) {
   const [allEntries, setEntries] = useState<Entry[]>([]);
   const [marked, setMarked] = useState<Set<string>>(new Set());
   const [cursor, setCursor] = useState("");
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [history, setHistory] = useState({ items: [] as Folder[], index: -1 });
@@ -99,7 +99,7 @@ export function useBrowser(pane: number, showHidden = false) {
         switch (message.type) {
           case "opened": {
             const next = message.data;
-            if (!options.refresh) setQuery("");
+            if (!options.refresh) setQuery(null);
             setFolder(next);
             setEntries([]);
             setMarked(new Set());
