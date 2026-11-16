@@ -2806,7 +2806,7 @@ dependencies = [
 
 [[package]]
 name = "sc-commander"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "base64 0.22.1",
  "dirs 6.0.0",
