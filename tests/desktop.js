@@ -190,8 +190,10 @@ async function run(paths) {
 
     originalTabs[0].click();
     await until(() => selectedTab(0) === originalTabs[0] && row(0, "alpha.txt"), "restore original left folder");
-    key(list(0), "p");
-    await until(() => panes[0].querySelector(".quick-search-query")?.textContent === "p", "search in original tab");
+    key(list(0), "a");
+    await until(() => panes[0].querySelector(".quick-search-query")?.textContent === "a" &&
+      panes[0].querySelector(".cursor .file-name")?.textContent === "alpha.txt", "search in original tab");
+    await select(0, "beta.txt");
     newLeftTab.click();
     await until(() => input(0).value === paths.target &&
       !panes[0].querySelector(".quick-search-query"), "separate tab search state");
@@ -208,7 +210,9 @@ async function run(paths) {
     key(list(0), "w", tabShortcut);
     await until(() => tabs(0).length === 1 && selectedTab(0) === originalTabs[0] &&
       input(0).value === paths.source &&
-      panes[0].querySelector(".quick-search-query")?.textContent === "p", "close selected left tab and restore search");
+      panes[0].querySelector(".quick-search-query")?.textContent === "a" &&
+      panes[0].querySelector(".cursor .file-name")?.textContent === "beta.txt",
+    "close selected left tab and restore search and cursor");
     key(list(0), "w", tabShortcut);
     middleClick(originalTabs[0]);
     if (tabs(0).length !== 1 || document.activeElement !== list(0))

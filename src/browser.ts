@@ -124,9 +124,9 @@ export function useBrowser(pane: number, showHidden = false) {
             return {
               ...previous,
               folder: next,
-              allEntries: [],
+              allEntries: options.preserveMarks ? previous.allEntries : [],
               marked: options.preserveMarks ? previous.marked : new Set(),
-              cursor: options.focus ?? "",
+              cursor: options.preserveMarks ? previous.cursor : options.focus ?? "",
               query: options.refresh ? previous.query : null,
               history: nextHistory,
             };
@@ -135,7 +135,8 @@ export function useBrowser(pane: number, showHidden = false) {
         }
         case "entries":
           buffer.push(...message.data);
-          if (timer.current === undefined)
+          // A refresh that retains marks keeps the full cached listing available until done.
+          if (!options.preserveMarks && timer.current === undefined)
             timer.current = setTimeout(flush, buffer.length <= 256 ? 0 : 120);
           break;
         case "done":
@@ -181,10 +182,10 @@ export function useBrowser(pane: number, showHidden = false) {
     else if (!pending && stale && folder) {
       start(activeId, {
         target: { id: folder.id },
-        options: { focus: cursor, refresh: true, preserveMarks: true },
+        options: { refresh: true, preserveMarks: true },
       });
     }
-  }, [activeId, cursor, folder, pending, stale, start]);
+  }, [activeId, folder, pending, stale, start]);
 
   const unhiddenEntries = useMemo(
     () => showHidden ? allEntries : allEntries.filter((entry) => !entry.hidden),

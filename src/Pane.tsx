@@ -84,7 +84,7 @@ export function Pane({
     selectedTab.current?.scrollIntoView({ block: "nearest", inline: "nearest" });
   }, [pane.activeId]);
   const rightDrag = useRef<{ rows: Entry[]; index: number; mark: boolean } | null>(null);
-  const previousQuery = useRef(pane.query);
+  const previousSearch = useRef({ tabId: pane.activeId, query: pane.query });
   const searching = pane.query !== null;
   const parent = pane.query ? null : pane.folder?.parent;
   const rows = useMemo(() => {
@@ -123,8 +123,9 @@ export function Pane({
   }, [pane.activeId, pane.folder]);
   useEffect(() => {
     if (pane.loading) return;
-    const queryChanged = previousQuery.current !== pane.query;
-    previousQuery.current = pane.query;
+    const previous = previousSearch.current;
+    const queryChanged = previous.tabId === pane.activeId && previous.query !== pane.query;
+    previousSearch.current = { tabId: pane.activeId, query: pane.query };
     if (pane.query && (queryChanged || index < 0)) {
       const needle = pane.query.toLocaleLowerCase();
       const prefix = rows.find((entry) => entry.name.toLocaleLowerCase().startsWith(needle));
@@ -134,7 +135,7 @@ export function Pane({
       }
     }
     if (index < 0 && rows.length) pane.setCursor(rows[0].id);
-  }, [pane.loading, pane.query, index, rows, pane.setCursor]);
+  }, [pane.activeId, pane.loading, pane.query, index, rows, pane.setCursor]);
   useEffect(() => {
     if (index >= 0) virtual.scrollToIndex(index, { align: "auto" });
   }, [index, pane.activeId, pane.query, virtual]);
