@@ -10,7 +10,7 @@ The app icon uses two terminal panes on a transparent background, with the panes
 
 Start with a compact Radix Themes dark interface with slate neutrals, an amber accent, and square corners. Use 24-pixel file rows, narrow pane gutters, and compact headers and toolbars to maximize visible files with 12-pixel file names and 11-pixel size and date text. Active panes, keyboard focus, cursor, and marked files remain visually distinct.
 
-The file panes start at the top of the app content, without an app title header. The bottom command bar includes Operations, with its job count and queue visibility toggle.
+The file panes start at the top of the app content, without an app title header. The bottom command bar includes Operations, with its job count and queue visibility toggle. Starting an operation preserves the current visibility of the Operations panel.
 
 ### Local browser
 
@@ -26,11 +26,11 @@ Files and folders whose names start with a dot or have the Windows Hidden attrib
 
 ### Local operations
 
-F2 renames, F5 copies to the opposite pane, F6 moves there, F7 creates a folder, and F8 sends items to the OS trash. Show the target before transferring. When trash is unavailable, leave the item in place. A single background queue reports progress, conflicts, cancellations, and partial results.
+F2 renames, F5 copies to the opposite pane, F6 moves there, F7 creates a folder, and F8 sends items to the OS trash. Show the target before transferring. When the copy, move, or trash dialog opens, focus the confirmation button so Enter starts the operation. Escape dismisses the dialog. When trash is unavailable, leave the item in place. A single background queue reports progress, conflicts, cancellations, and partial results.
 
 Offer Skip, Keep both, and Replace for file collisions. Merge matching directories. Publish completed copies before removing their sources on cross-volume moves. Clean up interrupted work, preserve links where supported, and reject recursive self-copies.
 
-The operations panel shows the current file, transferred bytes, conflicts, cancellation, and a detailed list of finished or skipped entries. Keep both chooses a numbered sibling. Replace is available for distinct regular files. Jobs stop on the first error. An in-progress directory transfer can leave completed children in the destination.
+The operations panel shows the current file, transferred bytes, cancellation, and a detailed list of finished or skipped entries. File conflicts open a modal dialog with the source and destination paths, their sizes and last modified times when available, and the available choices, including cancelling the job. Keep both initially has focus. Arrow keys move between actions, and Enter activates the focused action. The underlined letters C, S, K, and R activate Cancel job, Skip, Keep both, and Replace file when available. Keep both chooses a numbered sibling. Replace is available for distinct regular files. Trying to close the window with active jobs also opens a modal notice. Both dialogs preserve the visibility of the operations panel. Jobs stop on the first error. An in-progress directory transfer can leave completed children in the destination.
 
 ### Acceptance
 

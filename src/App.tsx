@@ -4,7 +4,9 @@ import { invoke } from "@tauri-apps/api/core";
 import { useBrowser } from "./browser";
 import { focusPane, Pane } from "./Pane";
 import {
+  CloseBlockedDialog,
   commands,
+  ConflictDialog,
   JobPanel,
   OperationDialog,
   prepare,
@@ -32,16 +34,21 @@ export function App() {
     left.invalidateListings();
     right.invalidateListings();
   });
+  const conflictedJob = queue.jobs.find((job) => job.conflict);
+  const queueDialogOpen = !prompt && !settings && Boolean(conflictedJob || queue.closeBlocked);
+  useEffect(() => {
+    if (queueDialogOpen) setPlacesSide(null);
+  }, [queueDialogOpen]);
   function begin(action: Action, side = active) {
     setActive(side);
     const request = prepare(action, panes[side], panes[1 - side]);
     if (request) setPrompt(request);
   }
-  const updates = useUpdates(queue.busy, !!prompt || settings, queue.update);
-  const updatePrompt = updates.visible && (!queue.busy || updates.installing) && !prompt && !settings;
+  const updates = useUpdates(queue.busy, !!prompt || settings || queueDialogOpen, queue.update);
+  const updatePrompt = updates.visible && (!queue.busy || updates.installing) && !prompt && !settings && !queueDialogOpen;
   useEffect(() => {
     function shortcuts(event: KeyboardEvent) {
-      if (prompt || settings || updatePrompt) return;
+      if (prompt || settings || updatePrompt || queueDialogOpen) return;
       const togglesHidden = isMac
         ? event.metaKey && event.shiftKey && !event.ctrlKey && event.code === "Period"
         : event.ctrlKey && !event.shiftKey && !event.metaKey && event.key.toLowerCase() === "h";
@@ -215,12 +222,19 @@ export function App() {
             setPrompt(null);
             requestAnimationFrame(() => focusPane(active));
           }}
-          submitted={() => {
-            queue.setVisible(true);
-            queue.update();
-          }}
+          submitted={queue.update}
         />
       )}
+      {queueDialogOpen && (conflictedJob?.conflict ? (
+        <ConflictDialog
+          key={`${conflictedJob.id}:${conflictedJob.conflict.token}`}
+          id={conflictedJob.id}
+          conflict={conflictedJob.conflict}
+          update={queue.update}
+        />
+      ) : queue.closeBlocked && (
+        <CloseBlockedDialog dismiss={() => queue.setCloseBlocked(false)} />
+      ))}
     </main>
   );
 }

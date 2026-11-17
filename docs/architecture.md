@@ -31,7 +31,7 @@ Rust includes a `hidden` flag on each entry based on its native dot name or Wind
 
 ## Copying between panes
 
-The frontend submits opaque source IDs and a destination to a single Rust worker queue. The UI polls compact job summaries every 250 ms while jobs are active and fetches detailed results on demand. A conflict suspends the worker until a token-matched decision or cancellation arrives. The panes stay interactive. Closing the window with pending work opens the queue.
+The frontend submits opaque source IDs and a destination to a single Rust worker queue. The UI polls compact job summaries every 250 ms while jobs are active and fetches detailed results on demand. A conflict suspends the worker until a token-matched decision or cancellation arrives. The queue summary includes source and destination metadata captured when the conflict was detected. The frontend presents the pending decision in a native modal after any open operation confirmation closes. A blocked window close displays a modal notice after any pending conflict. Neither modal changes the visibility of the queue panel.
 
 Moves first try an exclusive OS rename. A cross-volume move falls back to a staged copy in the destination directory. Regular files are copied in chunks, synced, then published with no-clobber semantics unless the user explicitly approved replacement. After a successful publication, a move removes its source. On failure, completed entries remain available in the report and unfinished source files stay in place. Folder collisions merge recursively, and unsupported special files report an error. Trash uses the platform trash service. The UI refreshes the active listings after completion and marks other tabs for refresh when selected.
 
