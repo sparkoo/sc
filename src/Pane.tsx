@@ -15,6 +15,7 @@ import { Icon } from "./Icons";
 type Place = { id: string; name: string; path: string };
 
 const ROW_HEIGHT = 24;
+const pathSeparator = /Win/i.test(navigator.platform) ? /[\\/]/ : "/";
 
 const date = new Intl.DateTimeFormat(undefined, {
   year: "numeric",
@@ -30,6 +31,7 @@ export function Pane({
   pane,
   side,
   active,
+  tabModifier,
   activate,
   placesOpen,
   setPlacesOpen,
@@ -37,6 +39,7 @@ export function Pane({
   pane: BrowserPane;
   side: number;
   active: boolean;
+  tabModifier: string;
   activate(): void;
   placesOpen: boolean;
   setPlacesOpen(open: boolean): void;
@@ -74,13 +77,14 @@ export function Pane({
       .finally(() => { if (current) setPlacesLoading(false); });
     return () => { current = false; };
   }, [placesOpen]);
-  const [sort, setSort] = useState<{ column: Column; reverse: boolean }>({
-    column: "name",
-    reverse: false,
-  });
+  const { sort, setSort } = pane;
   const scroll = useRef<HTMLDivElement>(null);
+  const selectedTab = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    selectedTab.current?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, [pane.activeId]);
   const rightDrag = useRef<{ rows: Entry[]; index: number; mark: boolean } | null>(null);
-  const previousQuery = useRef(pane.query);
+  const previousSearch = useRef({ tabId: pane.activeId, query: pane.query });
   const searching = pane.query !== null;
   const parent = pane.query ? null : pane.folder?.parent;
   const rows = useMemo(() => {
@@ -116,11 +120,12 @@ export function Pane({
   );
   useEffect(() => {
     setPath(pane.folder?.path ?? "");
-  }, [pane.folder]);
+  }, [pane.activeId, pane.folder]);
   useEffect(() => {
     if (pane.loading) return;
-    const queryChanged = previousQuery.current !== pane.query;
-    previousQuery.current = pane.query;
+    const previous = previousSearch.current;
+    const queryChanged = previous.tabId === pane.activeId && previous.query !== pane.query;
+    previousSearch.current = { tabId: pane.activeId, query: pane.query };
     if (pane.query && (queryChanged || index < 0)) {
       const needle = pane.query.toLocaleLowerCase();
       const prefix = rows.find((entry) => entry.name.toLocaleLowerCase().startsWith(needle));
@@ -130,10 +135,10 @@ export function Pane({
       }
     }
     if (index < 0 && rows.length) pane.setCursor(rows[0].id);
-  }, [pane.loading, pane.query, index, rows, pane.setCursor]);
+  }, [pane.activeId, pane.loading, pane.query, index, rows, pane.setCursor]);
   useEffect(() => {
     if (index >= 0) virtual.scrollToIndex(index, { align: "auto" });
-  }, [index, pane.query, virtual]);
+  }, [index, pane.activeId, pane.query, virtual]);
 
   function open(entry: Entry) {
     if (entry.id === parent) pane.up();
@@ -221,14 +226,8 @@ export function Pane({
     } else return;
     event.preventDefault();
   }
-  return (
-    <section
-      data-side={side}
-      className={"pane" + (active ? " active" : "")}
-      aria-label={name + " pane"}
-      onFocus={activate}
-      onPointerDown={activate}
-    >
+  const content = (
+    <>
       <div className="pane-header">
         <span className="pane-icon">
           <Icon name={side ? "right" : "left"} />
@@ -481,6 +480,88 @@ export function Pane({
               formatBytes(selected.reduce((n, e) => n + e.size, 0))
             : ""}
         </span>
+      </div>
+    </>
+  );
+
+  return (
+    <section
+      data-side={side}
+      className={"pane" + (active ? " active" : "")}
+      aria-label={name + " pane"}
+      onFocus={activate}
+      onPointerDown={(event) => { if (event.button !== 1) activate(); }}
+    >
+      <div className="pane-tabs">
+        <div className="tab-list" role="tablist" aria-label={name + " tabs"}>
+          {pane.tabs.map((tab, index) => {
+            const path = tab.folder?.path;
+            const label = path?.split(pathSeparator).filter(Boolean).at(-1) ?? path ?? "New tab";
+            return (
+              <button
+                key={tab.id}
+                className="folder-tab"
+                type="button"
+                role="tab"
+                id={`pane-${side}-tab-${tab.id}`}
+                aria-selected={tab.id === pane.activeId}
+                ref={tab.id === pane.activeId ? selectedTab : undefined}
+                aria-controls={`pane-${side}-content`}
+                tabIndex={tab.id === pane.activeId ? 0 : -1}
+                title={path}
+                onClick={() => {
+                  setPlacesOpen(false);
+                  pane.selectTab(tab.id);
+                  focusPane(side);
+                }}
+                onMouseDown={(event) => {
+                  if (event.button !== 1) return;
+                  event.preventDefault();
+                  if (document.activeElement === event.currentTarget) focusPane(side);
+                  pane.closeTab(tab.id);
+                }}
+                onKeyDown={(event) => {
+                  const last = pane.tabs.length - 1;
+                  const next = {
+                    ArrowLeft: index === 0 ? last : index - 1,
+                    ArrowRight: index === last ? 0 : index + 1,
+                    Home: 0,
+                    End: last,
+                  }[event.key];
+                  if (next === undefined || event.ctrlKey || event.metaKey || event.altKey) return;
+                  event.preventDefault();
+                  const id = pane.tabs[next].id;
+                  pane.selectTab(id);
+                  document.getElementById(`pane-${side}-tab-${id}`)?.focus();
+                }}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
+        <button
+          className="new-tab"
+          type="button"
+          aria-label={`New tab in ${name.toLowerCase()} pane`}
+          aria-keyshortcuts={tabModifier === "Cmd" ? "Meta+t" : "Control+t"}
+          title={`New tab (${tabModifier}+T)`}
+          onClick={() => {
+            setPlacesOpen(false);
+            pane.openTab();
+            focusPane(side);
+          }}
+        >
+          +
+        </button>
+      </div>
+      <div
+        className="pane-content"
+        role="tabpanel"
+        id={`pane-${side}-content`}
+        aria-labelledby={`pane-${side}-tab-${pane.activeId}`}
+      >
+        {content}
       </div>
     </section>
   );

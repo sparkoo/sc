@@ -51,6 +51,62 @@ input:not(.rt-TextFieldInput):focus-visible {
 .pane.active {
   border-color: var(--accent-8);
 }
+.pane-content {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+.pane-tabs,
+.tab-list {
+  display: flex;
+  min-width: 0;
+}
+.pane-tabs {
+  flex: none;
+  background: var(--gray-2);
+  border-bottom: 1px solid var(--gray-6);
+}
+.tab-list {
+  flex: 1;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+.folder-tab,
+.new-tab {
+  flex: none;
+  min-height: 24px;
+  border: 0;
+  border-right: 1px solid var(--gray-6);
+  background: none;
+  color: var(--gray-11);
+}
+.folder-tab {
+  min-width: 60px;
+  max-width: 150px;
+  padding: 0 9px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.new-tab {
+  width: 26px;
+  border-right: 0;
+  border-left: 1px solid var(--gray-6);
+  font-size: 16px;
+}
+.folder-tab:hover,
+.new-tab:hover {
+  background: var(--gray-4);
+}
+.folder-tab[aria-selected="true"] {
+  background: var(--gray-5);
+  color: var(--gray-12);
+}
+.pane.active .folder-tab[aria-selected="true"] {
+  background: var(--accent-4);
+  color: var(--accent-12);
+}
 .pane-header {
   display: flex;
   align-items: center;
