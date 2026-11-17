@@ -59,10 +59,14 @@ async function run(paths) {
   async function command(side, shortcut, name) {
     key(list(side), shortcut);
     await until(
-      () => document.querySelector("dialog[open]"),
+      () => document.querySelector("dialog[open] form"),
       "confirmation for " + shortcut,
     );
     const form = document.querySelector("dialog form");
+    if (!name) {
+      if (document.activeElement !== form.querySelector('button[type="submit"]'))
+        throw new Error("Confirmation is not focused for " + shortcut);
+    }
     const control = form.querySelector("input, button");
     control.focus();
     if (!key(control, "Tab") || document.activeElement !== control)
@@ -70,7 +74,7 @@ async function run(paths) {
     if (name) await setInput(form.querySelector("input"), name);
     form.requestSubmit();
     await until(
-      () => !document.querySelector("dialog"),
+      () => !document.querySelector("dialog form"),
       "dismiss confirmation",
     );
   }
@@ -400,17 +404,46 @@ async function run(paths) {
     }
     step = "copy";
     await command(0, "F5");
-    await job(1);
     await until(() => row(1, "alpha.txt"), "copied file");
+    const operations = document.querySelector(".jobs-button");
+    if (operations.getAttribute("aria-expanded") !== "false")
+      throw new Error("Starting a copy opened Operations");
+    operations.click();
+    await job(1);
+    operations.click();
     step = "keep both";
     await select(0, "alpha.txt");
     await command(0, "F5");
-    await until(() => document.querySelector(".conflict"), "file collision");
-    [...document.querySelectorAll(".conflict button")]
-      .find((b) => b.textContent === "Keep both")
-      .click();
-    await job(2);
+    await until(
+      () => document.querySelector("dialog[open] .conflict-actions"),
+      "file collision popup",
+    );
+    if (operations.getAttribute("aria-expanded") !== "false")
+      throw new Error("File collision opened Operations");
+    const modified = new Intl.DateTimeFormat(undefined, {
+      dateStyle: "medium",
+      timeStyle: "medium",
+    }).format(1600000000000);
+    for (const side of ["source", "destination"]) {
+      const details = document.querySelector(`section[aria-labelledby="conflict-${side}"]`);
+      if (!details?.textContent.includes("5 B") || !details.textContent.includes(modified))
+        throw new Error("Missing conflict metadata for " + side);
+    }
+    if (!key(document.activeElement, "Tab"))
+      throw new Error("Pane switching intercepted conflict dialog Tab");
+    if (document.activeElement.textContent !== "Keep both")
+      throw new Error("Keep both was not focused");
+    key(document.activeElement, "ArrowLeft");
+    if (document.activeElement.textContent !== "Skip")
+      throw new Error("ArrowLeft did not focus Skip");
+    key(document.activeElement, "ArrowRight");
+    if (document.activeElement.textContent !== "Keep both")
+      throw new Error("ArrowRight did not focus Keep both");
+    key(document.activeElement, "k");
     await until(() => row(1, "alpha (2).txt"), step);
+    await until(() => !document.querySelector("dialog[open]"), "closed conflict popup");
+    operations.click();
+    await job(2);
     step = "rename";
     await select(1, "alpha (2).txt");
     await command(1, "F2", "renamed.txt");

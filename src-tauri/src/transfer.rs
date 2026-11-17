@@ -3,6 +3,7 @@ use std::{
     fs::{self, File},
     io,
     path::{Component, Path, PathBuf},
+    time::UNIX_EPOCH,
 };
 
 use crate::local::resolve;
@@ -40,9 +41,35 @@ pub enum Decision {
     Replace,
 }
 
+#[derive(Clone, Serialize)]
+pub struct ConflictEntry {
+    path: String,
+    size: Option<u64>,
+    modified: Option<u64>,
+}
+
+impl ConflictEntry {
+    fn new(path: &Path, metadata: &fs::Metadata) -> Self {
+        Self {
+            path: path.display().to_string(),
+            size: metadata.is_file().then_some(metadata.len()),
+            modified: metadata
+                .modified()
+                .ok()
+                .and_then(|time| time.duration_since(UNIX_EPOCH).ok())
+                .map(|elapsed| elapsed.as_secs()),
+        }
+    }
+}
+
 pub trait Feedback {
     fn check(&self) -> io::Result<()>;
-    fn conflict(&self, path: &Path, replace: bool) -> io::Result<Decision>;
+    fn conflict(
+        &self,
+        source: ConflictEntry,
+        destination: ConflictEntry,
+        replace: bool,
+    ) -> io::Result<Decision>;
     fn progress(&self, path: &Path, bytes: u64);
     fn record(&self, path: &Path, outcome: &str);
 }
@@ -187,7 +214,11 @@ fn transfer(
         if !merge {
             let can_replace =
                 meta.is_file() && other.is_file() && !same_file::is_same_file(source, target)?;
-            match feedback.conflict(target, can_replace)? {
+            match feedback.conflict(
+                ConflictEntry::new(source, &meta),
+                ConflictEntry::new(target, &other),
+                can_replace,
+            )? {
                 Decision::Skip => {
                     feedback.record(source, "Skipped");
                     return Ok(false);

@@ -13,6 +13,15 @@ export const commands = [
   { key: "F8", action: "trash", label: "Trash" },
 ] as const;
 export type Action = (typeof commands)[number]["action"];
+type ConflictEntry = {
+  path: string;
+  size: number | null;
+  modified: number | null;
+};
+const conflictDate = new Intl.DateTimeFormat(undefined, {
+  dateStyle: "medium",
+  timeStyle: "medium",
+});
 type Job = {
   id: number;
   action: Action;
@@ -21,7 +30,12 @@ type Job = {
   bytes: number;
   records: number;
   error: string | null;
-  conflict: { token: number; path: string; replace: boolean } | null;
+  conflict: {
+    token: number;
+    source: ConflictEntry;
+    destination: ConflictEntry;
+    replace: boolean;
+  } | null;
 };
 const complete = (job: Job) =>
   ["finished", "cancelled", "failed"].includes(job.phase);
@@ -73,6 +87,7 @@ export function OperationDialog({
   submitted(): void;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
+  const confirm = useRef<HTMLButtonElement>(null);
   const [name, setName] = useState(
     prompt.action === "rename" ? prompt.names[0] : "",
   );
@@ -82,8 +97,9 @@ export function OperationDialog({
   const editName = prompt.action === "rename" || prompt.action === "newFolder";
   useEffect(() => {
     dialog.current?.showModal();
+    if (!editName) confirm.current?.focus();
     dialog.current?.querySelector("input")?.select();
-  }, []);
+  }, [editName]);
   async function submit() {
     if (sending) return;
     setSending(true);
@@ -157,7 +173,7 @@ export function OperationDialog({
             size="1"
             variant="solid"
             type="submit"
-            autoFocus={!editName}
+            ref={confirm}
             disabled={sending}
           >
             {title}
@@ -173,6 +189,7 @@ export function useJobs(onComplete: () => void) {
   const [visible, setVisible] = useState(false);
   const [error, setError] = useState("");
   const [revision, setRevision] = useState(0);
+  const [closeBlocked, setCloseBlocked] = useState(false);
   const finished = useRef(new Set<number>());
   const callback = useRef(onComplete);
   callback.current = onComplete;
@@ -206,8 +223,7 @@ export function useJobs(onComplete: () => void) {
   }, [revision]);
   useEffect(() => {
     const off = listen("queue-needs-attention", () => {
-      setVisible(true);
-      setError("Finish or cancel active jobs before closing.");
+      setCloseBlocked(true);
     });
     return () => {
       void off.then((stop) => stop());
@@ -222,7 +238,136 @@ export function useJobs(onComplete: () => void) {
       setError(String(e));
     }
   }
-  return { jobs, busy: jobs.some((job) => !complete(job)), visible, setVisible, error, setError, update, send };
+  return { jobs, busy: jobs.some((job) => !complete(job)), visible, setVisible, error, setError, update, send, closeBlocked, setCloseBlocked };
+}
+
+function QueueDialog({
+  title,
+  cancel,
+  children,
+  onKeyDown,
+}: {
+  title: string;
+  cancel?: () => void;
+  children: React.ReactNode;
+  onKeyDown?: React.KeyboardEventHandler<HTMLDialogElement>;
+}) {
+  const dialog = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    const element = dialog.current!;
+    element.showModal();
+    element.querySelector<HTMLElement>("[data-default-action]")?.focus();
+    return () => element.close();
+  }, []);
+  return (
+    <dialog
+      ref={dialog}
+      className="dialog"
+      aria-labelledby="queue-dialog-title"
+      onKeyDown={onKeyDown}
+      onCancel={(event) => {
+        event.preventDefault();
+        cancel?.();
+      }}
+    >
+      <h2 id="queue-dialog-title">{title}</h2>
+      {children}
+    </dialog>
+  );
+}
+
+export function CloseBlockedDialog({ dismiss }: { dismiss: () => void }) {
+  return (
+    <QueueDialog title="File operations are still active" cancel={dismiss}>
+      <p>Wait for the jobs to finish or cancel them in Operations before closing.</p>
+      <div className="dialog-actions">
+        <Button size="1" onClick={dismiss}>OK</Button>
+      </div>
+    </QueueDialog>
+  );
+}
+
+export function ConflictDialog({
+  id,
+  conflict,
+  update,
+}: {
+  id: number;
+  conflict: NonNullable<Job["conflict"]>;
+  update: () => void;
+}) {
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState("");
+  async function resolve(decision?: "skip" | "keepBoth" | "replace") {
+    if (sending) return;
+    setSending(true);
+    setError("");
+    try {
+      if (decision)
+        await invoke("answer_conflict", { id, token: conflict.token, decision });
+      else
+        await invoke("cancel_job", { id });
+      update();
+    } catch (reason) {
+      setError(String(reason));
+      setSending(false);
+      update();
+    }
+  }
+  return (
+    <QueueDialog title="Destination already exists" onKeyDown={(event) => {
+      if (sending || event.altKey || event.ctrlKey || event.metaKey) return;
+      const buttons = [...event.currentTarget.querySelectorAll<HTMLButtonElement>("button[data-shortcut]")];
+      const direction = ["ArrowLeft", "ArrowUp"].includes(event.key) ? -1
+        : ["ArrowRight", "ArrowDown"].includes(event.key) ? 1 : 0;
+      if (direction) {
+        event.preventDefault();
+        const current = buttons.findIndex((button) => button === document.activeElement);
+        buttons[(current + direction + buttons.length) % buttons.length]?.focus();
+        return;
+      }
+      const shortcut = buttons.find((button) => button.dataset.shortcut === event.key.toLowerCase());
+      if (shortcut) {
+        event.preventDefault();
+        if (!event.repeat) shortcut.click();
+      }
+    }}>
+      <div className="conflict-files">
+        {(["source", "destination"] as const).map((side) => {
+          const entry = conflict[side];
+          return (
+            <section key={side} aria-labelledby={`conflict-${side}`}>
+              <h3 id={`conflict-${side}`}>{side === "source" ? "Source" : "Destination"}</h3>
+              <p className="subject">{entry.path}</p>
+              <dl>
+                <dt>Size</dt>
+                <dd>{entry.size === null ? "Unavailable" : formatBytes(entry.size)}</dd>
+                <dt>Last modified</dt>
+                <dd>{entry.modified === null ? "Unavailable" : conflictDate.format(entry.modified * 1000)}</dd>
+              </dl>
+            </section>
+          );
+        })}
+      </div>
+      {error && <p className="error" role="alert">{error}</p>}
+      <div className="dialog-actions conflict-actions">
+        <Button size="1" variant="soft" data-shortcut="c" aria-keyshortcuts="C" disabled={sending} onClick={() => void resolve()}>
+          <span><u>C</u>ancel job</span>
+        </Button>
+        <Button size="1" variant="soft" data-shortcut="s" aria-keyshortcuts="S" disabled={sending} onClick={() => void resolve("skip")}>
+          <span><u>S</u>kip</span>
+        </Button>
+        <Button size="1" data-default-action="" data-shortcut="k" aria-keyshortcuts="K" disabled={sending} onClick={() => void resolve("keepBoth")}>
+          <span><u>K</u>eep both</span>
+        </Button>
+        {conflict.replace && (
+          <Button size="1" variant="soft" data-shortcut="r" aria-keyshortcuts="R" disabled={sending} onClick={() => void resolve("replace")}>
+            <span><u>R</u>eplace file</span>
+          </Button>
+        )}
+      </div>
+    </QueueDialog>
+  );
 }
 
 export function JobPanel({ queue }: { queue: ReturnType<typeof useJobs> }) {
@@ -282,35 +427,6 @@ export function JobPanel({ queue }: { queue: ReturnType<typeof useJobs> }) {
           </div>
           {job.current && <div className="job-path">{job.current}</div>}
           {job.error && <div className="error">{job.error}</div>}
-          {job.conflict && (
-            <div className="conflict">
-              <span>Already exists · {job.conflict.path}</span>
-              {[
-                "skip",
-                "keepBoth",
-                ...(job.conflict.replace ? ["replace"] : []),
-              ].map((decision) => (
-                <Button
-                  size="1"
-                  variant="soft"
-                  key={decision}
-                  onClick={() =>
-                    void queue.send("answer_conflict", {
-                      id: job.id,
-                      token: job.conflict!.token,
-                      decision,
-                    })
-                  }
-                >
-                  {decision === "keepBoth"
-                    ? "Keep both"
-                    : decision === "skip"
-                      ? "Skip"
-                      : "Replace file"}
-                </Button>
-              ))}
-            </div>
-          )}
           {report?.id === job.id && (
             <pre>{report.lines.join("\n") || "No changes completed."}</pre>
           )}
