@@ -16,6 +16,7 @@ import { Icon } from "./Icons";
 import { UpdateDialog, useUpdates } from "./Updates";
 
 const isMac = /Mac/i.test(navigator.platform);
+const tabModifier = isMac ? "Cmd" : "Ctrl";
 const hiddenShortcut = isMac ? "Cmd+Shift+." : "Ctrl+H";
 
 export function App() {
@@ -28,8 +29,8 @@ export function App() {
   const [prompt, setPrompt] = useState<Prompt | null>(null);
   const [settings, setSettings] = useState(false);
   const queue = useJobs(() => {
-    if (!left.loading) left.refresh();
-    if (!right.loading) right.refresh();
+    left.invalidateListings();
+    right.invalidateListings();
   });
   function begin(action: Action, side = active) {
     setActive(side);
@@ -52,17 +53,26 @@ export function App() {
         }
         return;
       }
-      if (
-        event.ctrlKey ||
-        event.altKey ||
-        event.metaKey
-      )
-        return;
       const pane =
         event.target instanceof Element
           ? event.target.closest<HTMLElement>(".pane")
           : null;
       const side = pane ? Number(pane.dataset.side) : active;
+      const tabShortcut = isMac
+        ? event.metaKey && !event.ctrlKey
+        : event.ctrlKey && !event.metaKey;
+      const key = event.key.toLowerCase();
+      if (tabShortcut && !event.shiftKey && !event.altKey && (key === "t" || key === "w")) {
+        event.preventDefault();
+        if (!event.repeat) {
+          setPlacesSide(null);
+          if (key === "t") panes[side].openTab();
+          else panes[side].closeTab();
+          focusPane(side);
+        }
+        return;
+      }
+      if (event.ctrlKey || event.altKey || event.metaKey) return;
       if (event.key === "Tab") {
         event.preventDefault();
         setPlacesSide(null);
@@ -105,6 +115,7 @@ export function App() {
             pane={pane}
             side={side}
             active={active === side}
+            tabModifier={tabModifier}
             placesOpen={placesSide === side}
             setPlacesOpen={(open) => setPlacesSide((current) =>
               open ? side : current === side ? null : current,

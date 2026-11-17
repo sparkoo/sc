@@ -165,6 +165,57 @@ async function run(paths) {
         panes[1].querySelector(".empty")?.textContent === "Empty folder",
       step,
     );
+    step = "independent pane tabs";
+    const tabs = (side) => [...panes[side].querySelectorAll('[role="tab"]')];
+    const selectedTab = (side) => tabs(side).find((tab) => tab.getAttribute("aria-selected") === "true");
+    const tabShortcut = /Mac/i.test(navigator.platform) ? { metaKey: true } : { ctrlKey: true };
+    const originalTabs = [selectedTab(0), selectedTab(1)];
+    const middleClick = (tab) => tab.dispatchEvent(
+      new MouseEvent("mousedown", { button: 1, buttons: 4, bubbles: true, cancelable: true }),
+    );
+
+    input(0).focus();
+    key(input(0), "t", tabShortcut);
+    await until(() => tabs(0).length === 2 && done(0) && input(0).value === paths.source, "open left tab");
+    if (tabs(1).length !== 1 || document.activeElement !== list(0))
+      throw new Error("Opening a left tab affected right tabs or lost list focus");
+    const newLeftTab = selectedTab(0);
+    await navigate(0, paths.target);
+    await until(() => done(0) && input(0).value === paths.target, "navigate second left tab");
+    list(0).focus();
+    key(list(0), "ArrowLeft", { altKey: true });
+    await until(() => done(0) && input(0).value === paths.source, "second tab history back");
+    key(list(0), "ArrowRight", { altKey: true });
+    await until(() => done(0) && input(0).value === paths.target, "second tab history forward");
+
+    originalTabs[0].click();
+    await until(() => selectedTab(0) === originalTabs[0] && row(0, "alpha.txt"), "restore original left folder");
+    key(list(0), "p");
+    await until(() => panes[0].querySelector(".quick-search-query")?.textContent === "p", "search in original tab");
+    newLeftTab.click();
+    await until(() => input(0).value === paths.target &&
+      !panes[0].querySelector(".quick-search-query"), "separate tab search state");
+
+    list(1).focus();
+    key(list(1), "t", tabShortcut);
+    await until(() => tabs(1).length === 2 && done(1), "open right tab");
+    middleClick(originalTabs[1]);
+    await until(() => tabs(1).length === 1 && selectedTab(1) !== originalTabs[1], "middle-close inactive tab");
+    if (tabs(0).length !== 2 || selectedTab(0) !== newLeftTab)
+      throw new Error("Right tab changes affected left tabs");
+
+    list(0).focus();
+    key(list(0), "w", tabShortcut);
+    await until(() => tabs(0).length === 1 && selectedTab(0) === originalTabs[0] &&
+      input(0).value === paths.source &&
+      panes[0].querySelector(".quick-search-query")?.textContent === "p", "close selected left tab and restore search");
+    key(list(0), "w", tabShortcut);
+    middleClick(originalTabs[0]);
+    if (tabs(0).length !== 1 || document.activeElement !== list(0))
+      throw new Error("Closing the last left tab removed it or lost focus");
+    key(list(0), "Escape");
+    await until(() => !panes[0].querySelector(".quick-search-query"), "exit restored search");
+
     step = "quick search";
     const query = (side) => panes[side].querySelector(".quick-search-query")?.textContent;
     list(0).focus();
