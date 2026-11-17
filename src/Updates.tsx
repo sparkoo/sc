@@ -1,6 +1,7 @@
 import { Button, Checkbox } from "@radix-ui/themes";
 import { invoke, isTauri } from "@tauri-apps/api/core";
 import { useEffect, useRef, useState } from "react";
+import { About } from "./About";
 
 const preference = "sc.automaticallyInstallUpdates";
 const noticeMs = 10_000;
@@ -104,6 +105,7 @@ export function UpdateDialog({
       </label>
       {!settings && status && <p role="status">{status}</p>}
       {error && <p className="error" role="alert">{error}</p>}
+      {settings && <About />}
       <div className="dialog-actions">
         <Button variant="soft" disabled={installing} onClick={close}>
           {settings ? "Close" : "Later"}

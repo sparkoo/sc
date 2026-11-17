@@ -39,6 +39,10 @@ Moves first try an exclusive OS rename. A cross-volume move falls back to a stag
 
 Regular-file copies use the Windows native copy API to retain alternate data streams and report cancellation. On Unix the staged file receives the source's extended attributes, modification time, and permissions. A metadata-copy error aborts before publishing the staged file. The source's identity, size, and modification time are checked before publication and again before removal on a move. A detected external edit preserves the source and reports an error.
 
+## Build information
+
+Vite embeds the source commit and its committer date when it starts. Builds from source archives without Git metadata display the commit as unavailable. Settings reads the version from the Tauri configuration and opens the fixed GitHub repository URL through the native host.
+
 ## Application updates
 
 Tagged GitHub Releases publish a manifest and signed Tauri update artifacts for the Windows installer, Linux AppImage, and macOS app bundle. Release builds embed the updater public key and the GitHub Releases manifest URL. The Rust updater checks versions, verifies the downloaded payload, and coordinates installation and restart with the file-operation queue. The frontend owns the update prompt, restart notice, and preference stored in local storage. Development and CI test builds have no updater endpoint.
