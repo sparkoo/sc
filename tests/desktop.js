@@ -107,7 +107,7 @@ async function run(paths) {
     const timestamp = about.querySelector("time");
     if (commit && (
       !/^[0-9a-f]{12}$/.test(commit.textContent) ||
-      !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{2}:\d{2}$/.test(timestamp?.dateTime)
+      !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:Z|[+-]\d{2}:\d{2})$/.test(timestamp?.dateTime)
     ))
       throw new Error("Settings has invalid build commit details");
     const originalPreference = settingsCheckbox().getAttribute("aria-checked");
