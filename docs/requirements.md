@@ -40,7 +40,7 @@ The operations panel shows the current file, transferred bytes, conflicts, cance
 
 ## Settings
 
-Settings shows the installed version, source commit and commit date when available, author, license, and a link that opens the GitHub repository in the system browser.
+Settings shows the installed version, source commit and commit timestamp with its timezone offset when available, author, license, and a link that opens the GitHub repository in the system browser.
 
 ## Application updates
 

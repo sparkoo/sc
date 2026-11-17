@@ -41,7 +41,7 @@ Regular-file copies use the Windows native copy API to retain alternate data str
 
 ## Build information
 
-Vite embeds the source commit and its committer date when it starts. Builds from source archives without Git metadata display the commit as unavailable. Settings reads the version from the Tauri configuration and opens the fixed GitHub repository URL through the native host.
+Vite embeds the source commit and its ISO 8601 committer timestamp when it starts. Builds from source archives without Git metadata display the commit as unavailable. Settings reads the version from the Tauri configuration and opens the fixed GitHub repository URL through the native host.
 
 ## Application updates
 

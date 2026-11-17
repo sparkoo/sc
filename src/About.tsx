@@ -3,7 +3,7 @@ import { invoke, isTauri } from "@tauri-apps/api/core";
 import { useState } from "react";
 import { version } from "../src-tauri/tauri.conf.json";
 
-declare const __BUILD_COMMIT__: { hash: string; date: string } | null;
+declare const __BUILD_COMMIT__: { hash: string; timestamp: string } | null;
 
 const repository = "https://github.com/sparkoo/sc";
 
@@ -20,12 +20,15 @@ export function About() {
         <dt>Build commit</dt>
         <dd>
           {commit ? (
-            <>
-              <code title={commit.hash}>{commit.hash.slice(0, 12)}</code>
-              {" ("}<time dateTime={commit.date}>{commit.date}</time>{")"}
-            </>
+            <code title={commit.hash}>{commit.hash.slice(0, 12)}</code>
           ) : "Unavailable"}
         </dd>
+        {commit && (
+          <>
+            <dt>Commit timestamp</dt>
+            <dd><time dateTime={commit.timestamp}>{commit.timestamp.replace("T", " ")}</time></dd>
+          </>
+        )}
         <dt>Author</dt>
         <dd>Michal Vala (sparkoo)</dd>
         <dt>Repository</dt>
