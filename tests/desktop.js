@@ -218,7 +218,19 @@ async function run(paths) {
 
     step = "quick search";
     const query = (side) => panes[side].querySelector(".quick-search-query")?.textContent;
-    list(0).focus();
+    const sortByName = panes[0].querySelector(".columns button");
+    sortByName.click();
+    await select(0, "beta.txt");
+    key(list(0), "A", { shiftKey: true });
+    await until(() => query(0) === "A" && row(0, "alpha.txt") && row(0, "beta.txt") &&
+      panes[0].querySelector(".cursor .file-name")?.textContent === "alpha.txt",
+      "prefer the prefix over the current substring match");
+    key(list(0), "ArrowUp");
+    await until(() => panes[0].querySelector(".cursor .file-name")?.textContent === "beta.txt",
+      "allow moving the cursor to a substring match");
+    key(list(0), "Escape");
+    await until(() => !query(0), "clear the prefix query");
+    sortByName.click();
     key(list(0), "P", { shiftKey: true });
     await until(() => query(0) === "P" && row(0, "alpha.txt") && !row(0, "beta.txt"),
       "case-insensitive substring filter");
