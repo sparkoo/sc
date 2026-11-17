@@ -94,6 +94,18 @@ async function run(paths) {
       .find((button) => button.textContent === "Close").click();
     settingsButton.click();
     await until(settingsCheckbox, "open update settings");
+    const about = document.querySelector("dialog[open] .about");
+    if (!about || !about.querySelector('a[href="https://github.com/sparkoo/sc"]'))
+      throw new Error("Settings is missing the About section or repository link");
+    if (!/^\d+\.\d+\.\d+\S*$/.test(about.querySelector("dd")?.textContent))
+      throw new Error("Settings is missing the installed version");
+    const commit = about.querySelector("code");
+    const timestamp = about.querySelector("time");
+    if (commit && (
+      !/^[0-9a-f]{12}$/.test(commit.textContent) ||
+      !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{2}:\d{2}$/.test(timestamp?.dateTime)
+    ))
+      throw new Error("Settings has invalid build commit details");
     const originalPreference = settingsCheckbox().getAttribute("aria-checked");
     settingsCheckbox().click();
     await until(() => settingsCheckbox().getAttribute("aria-checked") !== originalPreference, "toggle update preference");

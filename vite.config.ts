@@ -5,12 +5,12 @@ import { defineConfig } from "vite";
 function readCommit() {
   if (!existsSync(new URL(".git", import.meta.url))) return null;
   try {
-    const [hash, timestamp] = execFileSync("git", ["log", "-1", "--format=%H%n%cI"], {
+    const [hash, timestamp] = execFileSync("git", ["log", "-1", "--no-show-signature", "--no-notes", "--format=%H%n%cI"], {
       cwd: new URL(".", import.meta.url),
       encoding: "utf8",
       stdio: ["ignore", "pipe", "ignore"],
     }).trim().split(/\r?\n/);
-    return { hash, timestamp };
+    return hash && timestamp ? { hash, timestamp } : null;
   } catch {
     return null;
   }
