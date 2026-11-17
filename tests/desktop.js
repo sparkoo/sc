@@ -90,6 +90,28 @@ async function run(paths) {
   }
   let result;
   try {
+    step = "update settings";
+    const settingsButton = [...document.querySelectorAll(".commands button")]
+      .find((button) => button.textContent === "Settings");
+    const settingsCheckbox = () => document.querySelector('dialog[open] [role="checkbox"]');
+    const closeSettings = () => [...document.querySelectorAll("dialog button")]
+      .find((button) => button.textContent === "Close").click();
+    settingsButton.click();
+    await until(settingsCheckbox, "open update settings");
+    const originalPreference = settingsCheckbox().getAttribute("aria-checked");
+    settingsCheckbox().click();
+    await until(() => settingsCheckbox().getAttribute("aria-checked") !== originalPreference, "toggle update preference");
+    closeSettings();
+    await until(() => !settingsCheckbox(), "close update settings");
+    settingsButton.click();
+    await until(settingsCheckbox, "reopen update settings");
+    if (settingsCheckbox().getAttribute("aria-checked") === originalPreference)
+      throw new Error("The update preference did not survive closing Settings");
+    settingsCheckbox().click();
+    await until(() => settingsCheckbox().getAttribute("aria-checked") === originalPreference, "restore update preference");
+    closeSettings();
+    await until(() => !settingsCheckbox(), "dismiss update settings");
+
     step = "quick select native places";
     const places = await window.__TAURI_INTERNALS__.invoke("quick_places");
     const home = places.find((place) => place.name === "Home");
@@ -147,6 +169,111 @@ async function run(paths) {
         panes[1].querySelector(".empty")?.textContent === "Empty folder",
       step,
     );
+    step = "independent pane tabs";
+    const tabs = (side) => [...panes[side].querySelectorAll('[role="tab"]')];
+    const selectedTab = (side) => tabs(side).find((tab) => tab.getAttribute("aria-selected") === "true");
+    const tabShortcut = /Mac/i.test(navigator.platform) ? { metaKey: true } : { ctrlKey: true };
+    const originalTabs = [selectedTab(0), selectedTab(1)];
+    const middleClick = (tab) => tab.dispatchEvent(
+      new MouseEvent("mousedown", { button: 1, buttons: 4, bubbles: true, cancelable: true }),
+    );
+
+    input(0).focus();
+    key(input(0), "t", tabShortcut);
+    await until(() => tabs(0).length === 2 && done(0) && input(0).value === paths.source, "open left tab");
+    if (tabs(1).length !== 1 || document.activeElement !== list(0))
+      throw new Error("Opening a left tab affected right tabs or lost list focus");
+    const newLeftTab = selectedTab(0);
+    await navigate(0, paths.target);
+    await until(() => done(0) && input(0).value === paths.target, "navigate second left tab");
+    list(0).focus();
+    key(list(0), "ArrowLeft", { altKey: true });
+    await until(() => done(0) && input(0).value === paths.source, "second tab history back");
+    key(list(0), "ArrowRight", { altKey: true });
+    await until(() => done(0) && input(0).value === paths.target, "second tab history forward");
+
+    originalTabs[0].click();
+    await until(() => selectedTab(0) === originalTabs[0] && row(0, "alpha.txt"), "restore original left folder");
+    key(list(0), "a");
+    await until(() => panes[0].querySelector(".quick-search-query")?.textContent === "a" &&
+      panes[0].querySelector(".cursor .file-name")?.textContent === "alpha.txt", "search in original tab");
+    await select(0, "beta.txt");
+    newLeftTab.click();
+    await until(() => input(0).value === paths.target &&
+      !panes[0].querySelector(".quick-search-query"), "separate tab search state");
+
+    list(1).focus();
+    key(list(1), "t", tabShortcut);
+    await until(() => tabs(1).length === 2 && done(1), "open right tab");
+    middleClick(originalTabs[1]);
+    await until(() => tabs(1).length === 1 && selectedTab(1) !== originalTabs[1], "middle-close inactive tab");
+    if (tabs(0).length !== 2 || selectedTab(0) !== newLeftTab)
+      throw new Error("Right tab changes affected left tabs");
+
+    list(0).focus();
+    key(list(0), "w", tabShortcut);
+    await until(() => tabs(0).length === 1 && selectedTab(0) === originalTabs[0] &&
+      input(0).value === paths.source &&
+      panes[0].querySelector(".quick-search-query")?.textContent === "a" &&
+      panes[0].querySelector(".cursor .file-name")?.textContent === "beta.txt",
+    "close selected left tab and restore search and cursor");
+    key(list(0), "w", tabShortcut);
+    middleClick(originalTabs[0]);
+    if (tabs(0).length !== 1 || document.activeElement !== list(0))
+      throw new Error("Closing the last left tab removed it or lost focus");
+    key(list(0), "Escape");
+    await until(() => !panes[0].querySelector(".quick-search-query"), "exit restored search");
+
+    step = "quick search";
+    const query = (side) => panes[side].querySelector(".quick-search-query")?.textContent;
+    const sortByName = panes[0].querySelector(".columns button");
+    sortByName.click();
+    await select(0, "beta.txt");
+    key(list(0), "A", { shiftKey: true });
+    await until(() => query(0) === "A" && row(0, "alpha.txt") && row(0, "beta.txt") &&
+      panes[0].querySelector(".cursor .file-name")?.textContent === "alpha.txt",
+      "prefer the prefix over the current substring match");
+    key(list(0), "ArrowUp");
+    await until(() => panes[0].querySelector(".cursor .file-name")?.textContent === "beta.txt",
+      "allow moving the cursor to a substring match");
+    key(list(0), "Escape");
+    await until(() => !query(0), "clear the prefix query");
+    sortByName.click();
+    key(list(0), "P", { shiftKey: true });
+    await until(() => query(0) === "P" && row(0, "alpha.txt") && !row(0, "beta.txt"),
+      "case-insensitive substring filter");
+    await delay(900);
+    key(list(0), "h");
+    await until(() => query(0) === "Ph" && row(0, "alpha.txt") && !row(0, "..") &&
+      panes[0].querySelector(".cursor .file-name")?.textContent === "alpha.txt",
+      "persistent query and matching cursor");
+    key(list(0), "Tab");
+    await until(() => document.activeElement === list(1) && !query(1) && row(1, ".."),
+      "independent pane filters");
+    key(list(1), "Tab");
+    key(list(0), "z");
+    await until(() => panes[0].querySelector(".empty")?.textContent === "No matching items" &&
+      !list(0).hasAttribute("aria-activedescendant"), "no matches");
+    key(list(0), "Backspace");
+    await until(() => query(0) === "Ph" && row(0, "alpha.txt"), "edit the query");
+    for (const expected of ["P", "Quick Search"]) {
+      key(list(0), "Backspace");
+      await until(() => query(0) === expected, "erase the query");
+    }
+    await until(() => row(0, "beta.txt") && row(0, ".."), "restore the full list");
+    key(list(0), "Backspace", { repeat: true });
+    key(list(0), "Backspace");
+    await delay();
+    if (input(0).value !== paths.source || !done(0) || query(0) !== "Quick Search")
+      throw new Error("Backspace navigated with an empty Quick Search query");
+    key(list(0), "Escape");
+    await until(() => !query(0), "exit Quick Search");
+    key(list(0), "Backspace");
+    await until(() => done(0) && input(0).value !== paths.source && row(0, "source"),
+      "Backspace navigates after exiting Quick Search");
+    await navigate(0, paths.source);
+    await until(() => done(0) && row(0, "alpha.txt"), "return to source");
+
     step = "right-button drag selection";
     const mouse = (name, type, buttons) =>
       row(0, name).dispatchEvent(new MouseEvent(type, {

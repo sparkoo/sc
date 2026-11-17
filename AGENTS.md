@@ -9,7 +9,7 @@ Read [the requirements](docs/requirements.md) and [the architecture](docs/archit
 
 ## Worktree workflow
 
-- Keep the primary checkout on `master` and free of task edits. Do all repository edits, including documentation and configuration changes, in a separate worktree on a short-lived `codex/<task>` branch.
+- Keep the primary checkout on `master` and free of task edits. Do all repository edits, including documentation and configuration changes, in a separate worktree on a short-lived `work/<task>` branch.
 - Keep committed documentation and configuration portable. Do not include developer-specific absolute paths, usernames, hostnames, or local environment details; describe locations relative to the repository or discover them at runtime.
 - Apply this automatically to every task that changes files; the user does not need to request a feature branch or worktree. Read-only investigation can use the primary checkout.
 - Before editing, inspect the current checkout and existing worktrees. Reuse this chat's suitable task worktree; otherwise create and attach a managed worktree from the latest fetched `origin/master`, then create its task branch. Use the worktree's absolute path for all edits, commands, checks, and commits.

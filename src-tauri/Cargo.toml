@@ -1,6 +1,6 @@
 [package]
 name = "sc-commander"
-version = "0.1.1"
+version = "0.2.0"
 edition = "2021"
 description = "Two-pane desktop file commander"
 
@@ -22,6 +22,7 @@ renamore = "0.3"
 same-file = "1"
 trash = "5"
 tempfile = "3"
+tauri-plugin-updater = { version = "2", default-features = false, features = ["rustls-tls", "zip"] }
 
 [target.'cfg(unix)'.dependencies]
 xattr = "1"

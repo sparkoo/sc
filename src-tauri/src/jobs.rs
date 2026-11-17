@@ -94,8 +94,33 @@ impl Feedback for Job {
 }
 
 pub struct Queue {
-    jobs: Mutex<Vec<Arc<Job>>>,
+    state: Mutex<QueueState>,
     sender: mpsc::Sender<(Arc<Job>, Request)>,
+}
+
+#[derive(Default)]
+struct QueueState {
+    jobs: Vec<Arc<Job>>,
+    installing_update: bool,
+}
+
+impl QueueState {
+    fn busy(&self) -> bool {
+        self.jobs.iter().any(|job| {
+            matches!(
+                job.data.lock().unwrap().summary.phase,
+                "queued" | "running" | "conflict"
+            )
+        })
+    }
+}
+
+pub struct UpdateReservation<'a>(&'a Queue);
+
+impl Drop for UpdateReservation<'_> {
+    fn drop(&mut self) {
+        self.0.state.lock().unwrap().installing_update = false;
+    }
 }
 
 impl Queue {
@@ -117,7 +142,7 @@ impl Queue {
             }
         });
         Self {
-            jobs: Mutex::default(),
+            state: Mutex::default(),
             sender,
         }
     }
@@ -125,61 +150,80 @@ impl Queue {
 
 impl Queue {
     fn get(&self, id: usize) -> Result<Arc<Job>, String> {
-        self.jobs
+        self.state
             .lock()
             .unwrap()
+            .jobs
             .get(id)
             .cloned()
             .ok_or_else(|| "Unknown job".into())
     }
     pub fn busy(&self) -> bool {
-        self.jobs.lock().unwrap().iter().any(|j| {
-            matches!(
-                j.data.lock().unwrap().summary.phase,
-                "queued" | "running" | "conflict"
-            )
-        })
+        self.state.lock().unwrap().busy()
+    }
+
+    pub fn installing_update(&self) -> bool {
+        self.state.lock().unwrap().installing_update
+    }
+
+    pub fn reserve_for_update(&self) -> Result<Option<UpdateReservation<'_>>, String> {
+        let mut state = self.state.lock().unwrap();
+        if state.installing_update {
+            return Err("An update is already installing".into());
+        }
+        if state.busy() {
+            return Ok(None);
+        }
+        state.installing_update = true;
+        Ok(Some(UpdateReservation(self)))
+    }
+
+    fn enqueue(&self, request: Request) -> Result<usize, String> {
+        let mut state = self.state.lock().unwrap();
+        if state.installing_update {
+            return Err("Wait for the update to finish before starting a file operation".into());
+        }
+        let id = state.jobs.len();
+        let summary = Summary {
+            id,
+            action: request.action,
+            phase: "queued",
+            current: String::new(),
+            bytes: 0,
+            records: 0,
+            conflict: None,
+            error: None,
+        };
+        let job = Arc::new(Job {
+            data: Mutex::new(JobData {
+                summary,
+                cancelled: false,
+                decision: None,
+                token: 0,
+                report: Vec::new(),
+            }),
+            wake: Condvar::new(),
+        });
+        self.sender
+            .send((Arc::clone(&job), request))
+            .map_err(|e| e.to_string())?;
+        state.jobs.push(job);
+        Ok(id)
     }
 }
 
 #[tauri::command]
 pub fn start_job(queue: State<Queue>, request: Request) -> Result<usize, String> {
-    let mut jobs = queue.jobs.lock().unwrap();
-    let id = jobs.len();
-    let summary = Summary {
-        id,
-        action: request.action,
-        phase: "queued",
-        current: String::new(),
-        bytes: 0,
-        records: 0,
-        conflict: None,
-        error: None,
-    };
-    let job = Arc::new(Job {
-        data: Mutex::new(JobData {
-            summary,
-            cancelled: false,
-            decision: None,
-            token: 0,
-            report: Vec::new(),
-        }),
-        wake: Condvar::new(),
-    });
-    queue
-        .sender
-        .send((Arc::clone(&job), request))
-        .map_err(|e| e.to_string())?;
-    jobs.push(job);
-    Ok(id)
+    queue.enqueue(request)
 }
 
 #[tauri::command]
 pub fn job_list(queue: State<Queue>) -> Vec<Summary> {
     queue
-        .jobs
+        .state
         .lock()
         .unwrap()
+        .jobs
         .iter()
         .map(|job| job.data.lock().unwrap().summary.clone())
         .collect()
@@ -219,4 +263,33 @@ pub fn answer_conflict(
     data.decision = Some(decision);
     job.wake.notify_all();
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn update_reservation_and_file_jobs_exclude_each_other() {
+        // Keep the receiver connected without a worker so jobs stay queued.
+        let (sender, _receiver) = mpsc::channel();
+        let queue = Queue {
+            state: Mutex::default(),
+            sender,
+        };
+        let request = || Request {
+            action: Action::Copy,
+            sources: Vec::new(),
+            directory: String::new(),
+            name: None,
+        };
+
+        let reservation = queue.reserve_for_update().unwrap().unwrap();
+        assert!(queue.enqueue(request()).is_err());
+        assert!(queue.reserve_for_update().is_err());
+        drop(reservation);
+
+        assert_eq!(queue.enqueue(request()).unwrap(), 0);
+        assert!(queue.reserve_for_update().unwrap().is_none());
+    }
 }

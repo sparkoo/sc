@@ -7,6 +7,7 @@ mod storage;
 mod transfer;
 #[cfg(feature = "ui-test")]
 mod ui_test;
+mod updates;
 
 use std::sync::atomic::{AtomicU64, Ordering};
 use tauri::{ipc::Channel, Emitter, Manager};
@@ -71,15 +72,65 @@ fn frontend_ready(window: tauri::WebviewWindow, report: Option<serde_json::Value
     let _ = report;
 }
 
+#[cfg(target_os = "macos")]
+fn macos_menu(app: &tauri::AppHandle) -> tauri::Result<tauri::menu::Menu<tauri::Wry>> {
+    use tauri::menu::{Menu, MenuItem, MenuItemKind};
+
+    let menu = Menu::default(app)?;
+    // The default File and Window menus both claim Cmd+W.
+    for item in menu.items()? {
+        let MenuItemKind::Submenu(submenu) = item else {
+            continue;
+        };
+        for (index, item) in submenu.items()?.into_iter().enumerate() {
+            if let MenuItemKind::Predefined(item) = item {
+                if item.text()? != "Close" {
+                    continue;
+                }
+                let close = MenuItem::with_id(
+                    app,
+                    "close-window",
+                    "Close Window",
+                    true,
+                    Some("Cmd+Shift+W"),
+                )?;
+                submenu.remove(&item)?;
+                submenu.insert(&close, index)?;
+            }
+        }
+    }
+    Ok(menu)
+}
+
 fn main() {
     let provider: storage::Storage = std::sync::Arc::new(local::LocalStorage);
-    tauri::Builder::default()
+    let builder = tauri::Builder::default();
+    #[cfg(target_os = "macos")]
+    let builder = builder.menu(macos_menu).on_menu_event(|app, event| {
+        if event.id() == "close-window" {
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.close();
+            }
+        }
+    });
+    builder
+        .setup(|app| {
+            if app.config().plugins.0.contains_key("updater") {
+                app.handle()
+                    .plugin(tauri_plugin_updater::Builder::new().build())?;
+            }
+            Ok(())
+        })
         .manage(provider.clone())
         .manage(Browsers::default())
         .manage(jobs::Queue::new(provider))
+        .manage(updates::PendingUpdate::default())
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
-                if window.state::<jobs::Queue>().busy() {
+                let queue = window.state::<jobs::Queue>();
+                if queue.installing_update() {
+                    api.prevent_close();
+                } else if queue.busy() {
                     api.prevent_close();
                     let _ = window.emit("queue-needs-attention", ());
                 }
@@ -91,6 +142,8 @@ fn main() {
             quick_places,
             quick_place_label,
             open_file,
+            updates::check_update,
+            updates::install_update,
             jobs::start_job,
             jobs::job_list,
             jobs::job_report,

@@ -15,8 +15,10 @@ import {
   type Prompt,
 } from "./Operations";
 import { Icon } from "./Icons";
+import { UpdateDialog, useUpdates } from "./Updates";
 
 const isMac = /Mac/i.test(navigator.platform);
+const tabModifier = isMac ? "Cmd" : "Ctrl";
 const hiddenShortcut = isMac ? "Cmd+Shift+." : "Ctrl+H";
 
 export function App() {
@@ -27,12 +29,13 @@ export function App() {
   const [active, setActive] = useState(0);
   const [placesSide, setPlacesSide] = useState<number | null>(null);
   const [prompt, setPrompt] = useState<Prompt | null>(null);
+  const [settings, setSettings] = useState(false);
   const queue = useJobs(() => {
-    if (!left.loading) left.refresh();
-    if (!right.loading) right.refresh();
+    left.invalidateListings();
+    right.invalidateListings();
   });
   const conflictedJob = queue.jobs.find((job) => job.conflict);
-  const queueDialogOpen = !prompt && Boolean(conflictedJob || queue.closeBlocked);
+  const queueDialogOpen = !prompt && !settings && Boolean(conflictedJob || queue.closeBlocked);
   useEffect(() => {
     if (queueDialogOpen) setPlacesSide(null);
   }, [queueDialogOpen]);
@@ -41,9 +44,11 @@ export function App() {
     const request = prepare(action, panes[side], panes[1 - side]);
     if (request) setPrompt(request);
   }
+  const updates = useUpdates(queue.busy, !!prompt || settings || queueDialogOpen, queue.update);
+  const updatePrompt = updates.visible && (!queue.busy || updates.installing) && !prompt && !settings && !queueDialogOpen;
   useEffect(() => {
     function shortcuts(event: KeyboardEvent) {
-      if (prompt || queueDialogOpen) return;
+      if (prompt || settings || updatePrompt || queueDialogOpen) return;
       const togglesHidden = isMac
         ? event.metaKey && event.shiftKey && !event.ctrlKey && event.code === "Period"
         : event.ctrlKey && !event.shiftKey && !event.metaKey && event.key.toLowerCase() === "h";
@@ -55,17 +60,26 @@ export function App() {
         }
         return;
       }
-      if (
-        event.ctrlKey ||
-        event.altKey ||
-        event.metaKey
-      )
-        return;
       const pane =
         event.target instanceof Element
           ? event.target.closest<HTMLElement>(".pane")
           : null;
       const side = pane ? Number(pane.dataset.side) : active;
+      const tabShortcut = isMac
+        ? event.metaKey && !event.ctrlKey
+        : event.ctrlKey && !event.metaKey;
+      const key = event.key.toLowerCase();
+      if (tabShortcut && !event.shiftKey && !event.altKey && (key === "t" || key === "w")) {
+        event.preventDefault();
+        if (!event.repeat) {
+          setPlacesSide(null);
+          if (key === "t") panes[side].openTab();
+          else panes[side].closeTab();
+          focusPane(side);
+        }
+        return;
+      }
+      if (event.ctrlKey || event.altKey || event.metaKey) return;
       if (event.key === "Tab") {
         event.preventDefault();
         setPlacesSide(null);
@@ -108,6 +122,7 @@ export function App() {
             pane={pane}
             side={side}
             active={active === side}
+            tabModifier={tabModifier}
             placesOpen={placesSide === side}
             setPlacesOpen={(open) => setPlacesSide((current) =>
               open ? side : current === side ? null : current,
@@ -177,7 +192,29 @@ export function App() {
           <Icon name="activity" />
           Operations {queue.jobs.length || ""}
         </Button>
+        <Button size="1" variant="soft" onClick={() => {
+          setPlacesSide(null);
+          setSettings(true);
+        }}>
+          Settings
+        </Button>
       </footer>
+      {updates.visible && queue.busy && !updates.installing && (
+        <p className="update-status" role="status">
+          Version {updates.version} is available. Finish file operations to update.
+        </p>
+      )}
+      {(settings || updatePrompt) && (
+        <UpdateDialog
+          updates={updates}
+          settings={settings}
+          close={() => {
+            if (settings) setSettings(false);
+            else updates.later();
+            requestAnimationFrame(() => focusPane(active));
+          }}
+        />
+      )}
       {prompt && (
         <OperationDialog
           prompt={prompt}
@@ -188,7 +225,7 @@ export function App() {
           submitted={queue.update}
         />
       )}
-      {!prompt && (conflictedJob?.conflict ? (
+      {queueDialogOpen && (conflictedJob?.conflict ? (
         <ConflictDialog
           key={`${conflictedJob.id}:${conflictedJob.conflict.token}`}
           id={conflictedJob.id}
