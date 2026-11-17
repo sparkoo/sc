@@ -62,6 +62,14 @@ async fn open_file(app: tauri::AppHandle, id: String) -> Result<(), String> {
 }
 
 #[tauri::command]
+async fn open_repository() -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(|| open::that("https://github.com/sparkoo/sc"))
+        .await
+        .map_err(|e| e.to_string())?
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 fn frontend_ready(window: tauri::WebviewWindow, report: Option<serde_json::Value>) {
     if std::env::args_os().any(|arg| arg == "--smoke-test") {
         window.app_handle().exit(0);
@@ -142,6 +150,7 @@ fn main() {
             quick_places,
             quick_place_label,
             open_file,
+            open_repository,
             updates::check_update,
             updates::install_update,
             jobs::start_job,

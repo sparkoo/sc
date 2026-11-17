@@ -38,6 +38,10 @@ The operations panel shows the current file, transferred bytes, cancellation, an
 - Complete a keyboard-only copy, conflict resolution, rename, and trash cycle. Verify contents and focus after each step.
 - On a full destination, denied access, or cancelled cross-drive move, identify completed and unfinished work. Verify unfinished sources remain intact.
 
+## Settings
+
+Settings shows the installed version, source commit and commit timestamp with its timezone offset when available, author, license, and a link that opens the GitHub repository in the system browser.
+
 ## Application updates
 
 Installed release builds check for newer stable versions at launch. When an update is available, offer Install update and Later. Later defers the update for the current session. The prompt and Settings → Updates share a saved Automatically install future updates checkbox, off by default. When enabled, announce the update before installation starts and allow the user to defer it or turn off automatic installation. Wait for file operations to finish before installing, and restart after a successful installation. Installation errors leave the application open and allow a retry.

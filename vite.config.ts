@@ -1,6 +1,23 @@
+import { execFileSync } from "node:child_process";
+import { existsSync } from "node:fs";
 import { defineConfig } from "vite";
+
+function readCommit() {
+  if (!existsSync(new URL(".git", import.meta.url))) return null;
+  try {
+    const [hash, timestamp] = execFileSync("git", ["log", "-1", "--no-show-signature", "--no-notes", "--format=%H%n%cI"], {
+      cwd: new URL(".", import.meta.url),
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    }).trim().split(/\r?\n/);
+    return hash && timestamp ? { hash, timestamp } : null;
+  } catch {
+    return null;
+  }
+}
 
 export default defineConfig({
   clearScreen: false,
+  define: { __BUILD_COMMIT__: JSON.stringify(readCommit()) },
   server: { port: 1420, strictPort: true },
 });
